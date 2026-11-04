@@ -32,7 +32,7 @@ The script fetches `/feed.xml` and checks that:
 - ZIP codes are 5 digits, including leading zeros
 - every feed URL returns 200 and the page title matches the listing
 - pay, city, state, ZIP, and description on the page match the feed
-- the download button carries `pid`, `c`, `af_sub1`, and `af_sub2`
+- the download button keeps the base URL's `pid` and appends `c`, `af_sub1`, and `af_sub2`
 - closed jobs are absent from the feed and their pages return 410
 
 Set `VALIDATE_BASE_URL` if the app is not on port 43123. Leave `SITE_URL` unset while validating locally so the feed URLs use the same host.
@@ -57,13 +57,15 @@ One object per visit:
 
 The three open sample visits are Nashua NH `03060`, Secaucus NJ `07094`, and Hackensack NJ `07601`. Cambridge MA `02139` is closed so the 410 page can be checked. It is not in the feed.
 
-Pay, the contact email, and the OneLink are placeholders until Hetal sends the real values.
+Pay and the contact email are placeholders until Hetal sends the real values.
 
 ## What a job page does
 
 The page is server rendered. It shows the title, pay, city, state, ZIP, and the same HTML description Indeed receives. One button, **Download the Hetal app**, links to the OneLink:
 
-`{ONELINK_BASE_URL}?pid=indeed&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`
+`{ONELINK_BASE_URL}&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`
+
+The base URL already contains `?af_xp=custom&pid=job-board-xml`, so the visit params are appended with `&` and encoded. The button does not add a second `pid`.
 
 The page also includes JobPosting JSON-LD. There is no apply form and no sign-in. Candidates apply in the app.
 
@@ -79,7 +81,7 @@ The feed URL host follows the request, unless `SITE_URL` is set.
 
 | Variable | Purpose |
 | --- | --- |
-| `ONELINK_BASE_URL` | AppsFlyer OneLink. Default `https://hetal.onelink.me/placeholder`. |
+| `ONELINK_BASE_URL` | Download link base. Default `https://app.hetalretail.com/sfUI?af_xp=custom&pid=job-board-xml`. |
 | `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `jobs@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
 | `SITE_URL` | Optional canonical origin for feed URLs. Leave unset until `jobs.hetalretail.com` answers. |

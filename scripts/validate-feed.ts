@@ -297,23 +297,23 @@ async function main() {
       ok(`${job.referencenumber} JSON-LD keeps ZIP ${job.postalcode}`);
     }
 
-    const apply = [...html.matchAll(/href="([^"]+)"/g)]
-      .map((match) => decodeHtml(match[1]))
-      .map((href) => {
-        try {
-          return new URL(href);
-        } catch {
-          return undefined;
-        }
-      })
-      .find((url) => url?.searchParams.get("pid") === "indeed");
+    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => decodeHtml(match[1]));
+    const applyHref = hrefs.find((href) => {
+      try {
+        return new URL(href).searchParams.get("af_sub2") === job.referencenumber;
+      } catch {
+        return false;
+      }
+    });
 
-    if (!apply) {
-      fail(`${job.referencenumber} page is missing the Download button OneLink`);
+    if (!applyHref) {
+      fail(`${job.referencenumber} page is missing the Download button link`);
       continue;
     }
+    const apply = new URL(applyHref);
+    const pidCount = [...apply.searchParams.keys()].filter((key) => key === "pid").length;
     const expectedParams: Array<[string, string]> = [
-      ["pid", "indeed"],
+      ["af_xp", "custom"],
       ["c", job.title_id],
       ["af_sub1", job.postalcode],
       ["af_sub2", job.referencenumber],
@@ -321,14 +321,24 @@ async function main() {
     const mismatched = expectedParams.filter(
       ([key, value]) => apply.searchParams.get(key) !== value,
     );
-    if (mismatched.length > 0) {
+    const appendedWithAmpersand =
+      applyHref.includes("&c=") &&
+      applyHref.includes("&af_sub1=") &&
+      applyHref.includes("&af_sub2=");
+    if (pidCount !== 1 || apply.searchParams.get("pid") !== "job-board-xml") {
       fail(
-        `${job.referencenumber} OneLink is missing ${mismatched
+        `${job.referencenumber} link must keep a single pid=job-board-xml from the base URL (${applyHref})`,
+      );
+    } else if (!appendedWithAmpersand) {
+      fail(`${job.referencenumber} link must append c, af_sub1, and af_sub2 with & (${applyHref})`);
+    } else if (mismatched.length > 0) {
+      fail(
+        `${job.referencenumber} link is missing ${mismatched
           .map(([key]) => key)
-          .join(", ")} (${apply.toString()})`,
+          .join(", ")} (${applyHref})`,
       );
     } else {
-      ok(`${job.referencenumber} OneLink has pid, c, af_sub1, and af_sub2`);
+      ok(`${job.referencenumber} link keeps pid and appends c, af_sub1, and af_sub2`);
     }
   }
 
@@ -346,7 +356,7 @@ async function main() {
       fail(`${job.referencenumber} 410 page is missing the no longer available message`);
       continue;
     }
-    if (/[?&]pid=indeed\b/i.test(html)) {
+    if (/app\.hetalretail\.com|[?&]af_sub2=/i.test(html)) {
       fail(`${job.referencenumber} closed page still includes the apply link`);
       continue;
     }
