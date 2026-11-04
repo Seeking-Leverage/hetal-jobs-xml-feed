@@ -1,11 +1,27 @@
-export function SiteFooter({ companyName }: { companyName: string }) {
+import { getCompanyName } from "@/lib/config";
+
+export function SiteFooter() {
+  const companyName = getCompanyName();
+
   return (
-    <footer className="mt-auto border-t border-border">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-5 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+    <footer className="mx-auto w-full max-w-xl px-4 pt-2 pb-10 text-sm text-muted-foreground">
+      <div className="border-t border-border pt-6">
         <p>{companyName} hires Hetalites for on-demand store audits.</p>
-        <a href="/feed.xml" className="font-medium text-foreground underline-offset-4 hover:underline">
-          Indeed job feed
-        </a>
+        <p className="mt-2">
+          <a className="text-foreground underline underline-offset-2" href="mailto:support@hetalretail.com">
+            support@hetalretail.com
+          </a>
+        </p>
+        <p className="mt-1">
+          <a className="text-foreground underline underline-offset-2" href="https://www.hetalretail.com">
+            hetalretail.com
+          </a>
+        </p>
+        <p className="mt-1">
+          <a className="text-foreground underline underline-offset-2" href="/feed.xml">
+            Indeed job feed
+          </a>
+        </p>
       </div>
     </footer>
   );

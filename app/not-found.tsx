@@ -2,20 +2,22 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-12">
-      <p className="text-sm font-medium tracking-[0.14em] text-primary uppercase">Missing visit</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
+    <div>
+      <p className="text-[0.8rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+        Missing visit
+      </p>
+      <h1 className="mt-2 text-[2rem] leading-tight font-semibold tracking-tight">
         That job is not on this board
       </h1>
-      <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+      <p className="mt-4 text-lg leading-7">
         The link may be mistyped, or this visit was never published.
       </p>
       <Link
         href="/"
-        className="mt-6 inline-flex h-12 items-center justify-center rounded-xl bg-primary px-5 font-semibold text-primary-foreground"
+        className="mt-6 inline-flex h-14 w-full items-center justify-center bg-primary px-4 text-base font-semibold text-primary-foreground hover:bg-[#e6c43a]"
       >
         See open audits
       </Link>
-    </main>
+    </div>
   );
 }
