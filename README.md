@@ -43,7 +43,7 @@ One object per visit:
 
 | Field | Notes |
 | --- | --- |
-| `referencenumber` | `HTL-{ZIP}-{YYYYMMDD}-{title_id}`. Example: `HTL-03060-20261109-store-auditor`. The date is `date_posted` without hyphens. The title slug is lowercase words separated by hyphens, the same value as `title_id`. Indeed uses this to tell listings apart. Once published, keep it forever. Never reuse it for another title, date, or job. |
+| `referencenumber` | `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}`. Example: `HTL-03060-20261109-store-auditor-01`. The date is `date_posted` without hyphens. The title slug is lowercase words separated by hyphens, the same value as `title_id`. `NN` is a two-digit sequence, starting at `01`. Indeed uses this to tell listings apart. Never reuse a reference number. |
 | `requisitionid` | Shared id. The same visit in several cities can share one requisition id. |
 | `title` | Job title only. Do not put the city, pay, or schedule in the title. |
 | `title_id` | Slug sent as the OneLink campaign (`c`). Example: `store-auditor`. |
@@ -55,7 +55,7 @@ One object per visit:
 | `status` | `open` or `closed`. Only `open` jobs are in the feed. |
 | `date_posted` | `YYYY-MM-DD`. This is the date in the feed. Do not use a future date. |
 
-The three open sample visits are Nashua NH `HTL-03060-20261101-store-auditor`, Secaucus NJ `HTL-07094-20261102-store-auditor`, and Hackensack NJ `HTL-07601-20261103-store-auditor`. Cambridge MA `HTL-02139-20260915-store-auditor` is closed so the 410 page can be checked. It is not in the feed.
+The three open sample visits are Nashua NH `HTL-03060-20261101-store-auditor-01`, Secaucus NJ `HTL-07094-20261102-store-auditor-01`, and Hackensack NJ `HTL-07601-20261103-store-auditor-01`. Cambridge MA `HTL-02139-20260915-store-auditor-01` is closed so the 410 page can be checked. It is not in the feed.
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 

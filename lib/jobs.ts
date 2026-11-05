@@ -9,7 +9,7 @@ const ENTITY = /&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]+);/;
 const PAY_PATTERN =
   /^\$\d+(?:\.\d{2})?(?: - \$\d+(?:\.\d{2})?)? per (?:audit|hour|day|week|month|year)$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const REF_PATTERN = /^HTL-\d{5}-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const REF_PATTERN = /^HTL-\d{5}-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*-\d{2}$/;
 const TITLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const STATE_PATTERN = /^[A-Z]{2}$/;
 
@@ -79,7 +79,7 @@ function normalizeJob(value: unknown, index: number): Job {
   const referencenumber = requiredString(record, "referencenumber", index);
   if (!REF_PATTERN.test(referencenumber)) {
     throw new JobsDataError(
-      `jobs[${index}].referencenumber must look like HTL-03060-20261109-store-auditor: HTL, a 5-digit ZIP, YYYYMMDD, and a lowercase hyphenated title slug.`,
+      `jobs[${index}].referencenumber must look like HTL-03060-20261109-store-auditor-01: HTL, a 5-digit ZIP, YYYYMMDD, a lowercase hyphenated title slug, and a two-digit sequence.`,
     );
   }
 
@@ -143,10 +143,11 @@ function normalizeJob(value: unknown, index: number): Job {
   }
 
   const postalcode = normalizePostalCode(record.postalcode, index);
-  const expectedRef = `HTL-${postalcode}-${date_posted.replaceAll("-", "")}-${title_id}`;
-  if (referencenumber !== expectedRef) {
+  const expectedPrefix = `HTL-${postalcode}-${date_posted.replaceAll("-", "")}-${title_id}-`;
+  const sequence = referencenumber.slice(expectedPrefix.length);
+  if (!referencenumber.startsWith(expectedPrefix) || !/^\d{2}$/.test(sequence)) {
     throw new JobsDataError(
-      `jobs[${index}].referencenumber must be ${expectedRef}. Keep a published reference number forever, and do not reuse it for another title, date, or job.`,
+      `jobs[${index}].referencenumber must start with ${expectedPrefix} and end with a two-digit sequence such as 01. Never reuse a reference number.`,
     );
   }
 

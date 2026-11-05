@@ -6,10 +6,10 @@ import { buildJobPosting } from "../lib/jsonld";
 import { findJob, loadJobs, openJobs } from "../lib/jobs";
 import { buildOnelink } from "../lib/onelink";
 
-const nashua = findJob("HTL-03060-20261101-store-auditor");
-const secaucus = findJob("HTL-07094-20261102-store-auditor");
-const hackensack = findJob("HTL-07601-20261103-store-auditor");
-const cambridge = findJob("HTL-02139-20260915-store-auditor");
+const nashua = findJob("HTL-03060-20261101-store-auditor-01");
+const secaucus = findJob("HTL-07094-20261102-store-auditor-01");
+const hackensack = findJob("HTL-07601-20261103-store-auditor-01");
+const cambridge = findJob("HTL-02139-20260915-store-auditor-01");
 
 describe("jobs.json", () => {
   it("keeps leading zeros on postal codes", () => {
@@ -26,7 +26,7 @@ describe("jobs.json", () => {
     const open = openJobs();
     assert.equal(open.length, 3);
     assert.equal(
-      open.some((job) => job.referencenumber === "HTL-02139-20260915-store-auditor"),
+      open.some((job) => job.referencenumber === "HTL-02139-20260915-store-auditor-01"),
       false,
     );
     assert.equal(
@@ -74,7 +74,7 @@ describe("OneLink", () => {
       const href = buildOnelink(nashua);
       assert.equal(
         href,
-        `${ONELINK_BASE}&c=store-auditor&af_sub1=03060&af_sub2=HTL-03060-20261101-store-auditor`,
+        `${ONELINK_BASE}&c=store-auditor&af_sub1=03060&af_sub2=HTL-03060-20261101-store-auditor-01`,
       );
       assert.equal(getOnelinkBaseUrl(), ONELINK_BASE);
       assert.equal(href.includes("app.hetalretail.com"), false);
@@ -86,7 +86,7 @@ describe("OneLink", () => {
       assert.equal(url.searchParams.get("c"), "store-auditor");
       assert.equal(url.searchParams.get("af_web_dp"), "http://indeed.hetalretail.com/");
       assert.equal(url.searchParams.get("af_sub1"), "03060");
-      assert.equal(url.searchParams.get("af_sub2"), "HTL-03060-20261101-store-auditor");
+      assert.equal(url.searchParams.get("af_sub2"), "HTL-03060-20261101-store-auditor-01");
       assert.equal(href.includes("&c="), true);
     } finally {
       if (previous === undefined) delete process.env.ONELINK_BASE_URL;
@@ -98,7 +98,7 @@ describe("OneLink", () => {
     assert.ok(secaucus);
     const url = new URL(buildOnelink(secaucus));
     assert.equal(url.searchParams.get("af_sub1"), "07094");
-    assert.equal(url.searchParams.get("af_sub2"), "HTL-07094-20261102-store-auditor");
+    assert.equal(url.searchParams.get("af_sub2"), "HTL-07094-20261102-store-auditor-01");
   });
 });
 
@@ -147,9 +147,9 @@ describe("JobPosting", () => {
     const refs = jobs.map((job) => job.referencenumber);
     assert.equal(new Set(refs).size, refs.length);
     for (const job of jobs) {
-      const expected = `HTL-${job.postalcode}-${job.date_posted.replaceAll("-", "")}-${job.title_id}`;
+      const expected = `HTL-${job.postalcode}-${job.date_posted.replaceAll("-", "")}-${job.title_id}-01`;
       assert.equal(job.referencenumber, expected);
-      assert.match(job.referencenumber, /^HTL-\d{5}-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      assert.match(job.referencenumber, /^HTL-\d{5}-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*-\d{2}$/);
     }
   });
 });

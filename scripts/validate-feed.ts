@@ -218,10 +218,13 @@ async function main() {
       continue;
     }
 
-    const expectedRef = `HTL-${job.postalcode}-${job.date_posted.replaceAll("-", "")}-${job.title_id}`;
-    if (row.referencenumber !== expectedRef) {
+    const expectedPrefix = `HTL-${job.postalcode}-${job.date_posted.replaceAll("-", "")}-${job.title_id}-`;
+    if (
+      !/^HTL-\d{5}-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*-\d{2}$/.test(row.referencenumber) ||
+      !row.referencenumber.startsWith(expectedPrefix)
+    ) {
       fail(
-        `${job.referencenumber} must be ${expectedRef} so the feed, page, and af_sub2 share one permanent id`,
+        `${job.referencenumber} must be ${expectedPrefix}NN so the feed, page, and af_sub2 share one permanent id`,
       );
     }
 

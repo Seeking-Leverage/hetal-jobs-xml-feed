@@ -14,7 +14,7 @@ The download button uses this OneLink and appends only `&c={title_id}&af_sub1={p
 
 Do not add `c=indeed_launch` to that base URL, and do not add a second `pid`. ZIP codes stay 5-digit text.
 
-Each `referencenumber` is `HTL-{ZIP}-{YYYYMMDD}-{title_id}`, for example `HTL-03060-20261109-store-auditor`. The title slug is lowercase words separated by hyphens. `af_sub2` and `/jobs/{referencenumber}` use that same id. Once Indeed has seen a reference number, keep it on that job. Never reuse it for another title, date, or job.
+Each `referencenumber` is `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}`, for example `HTL-03060-20261109-store-auditor-01`. The title slug is lowercase words separated by hyphens, and `NN` is a two-digit sequence. `af_sub2` and `/jobs/{referencenumber}` use that same id. Never reuse a reference number.
 
 ## Checklist
 
