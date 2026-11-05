@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import sampleJobs from "../fixtures/sample-jobs.json";
 import { getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { buildJobPosting } from "../lib/jsonld";
-import { findJob, loadJobs, openJobs } from "../lib/jobs";
+import { parseJobs } from "../lib/jobs";
 import { buildOnelink } from "../lib/onelink";
 
-const nashua = findJob("HTL-03060-20261101-store-auditor-01");
-const secaucus = findJob("HTL-07094-20261102-store-auditor-01");
-const hackensack = findJob("HTL-07601-20261103-store-auditor-01");
-const cambridge = findJob("HTL-02139-20260915-store-auditor-01");
+const sample = parseJobs(sampleJobs);
+const nashua = sample.find((job) => job.referencenumber === "HTL-03060-20261101-store-auditor-01");
+const secaucus = sample.find((job) => job.referencenumber === "HTL-07094-20261102-store-auditor-01");
+const hackensack = sample.find((job) => job.referencenumber === "HTL-07601-20261103-store-auditor-01");
+const cambridge = sample.find((job) => job.referencenumber === "HTL-02139-20260915-store-auditor-01");
 
 describe("jobs.json", () => {
   it("keeps leading zeros on postal codes", () => {
@@ -23,7 +25,7 @@ describe("jobs.json", () => {
   });
 
   it("lists only open jobs for the feed and the index", () => {
-    const open = openJobs();
+    const open = sample.filter((job) => job.status === "open");
     assert.equal(open.length, 3);
     assert.equal(
       open.some((job) => job.referencenumber === "HTL-02139-20260915-store-auditor-01"),
@@ -88,6 +90,7 @@ describe("OneLink", () => {
       assert.equal(url.searchParams.get("af_sub1"), "03060");
       assert.equal(url.searchParams.get("af_sub2"), "HTL-03060-20261101-store-auditor-01");
       assert.equal(href.includes("&c="), true);
+      assert.equal(buildOnelink(nashua, "indeed"), href);
     } finally {
       if (previous === undefined) delete process.env.ONELINK_BASE_URL;
       else process.env.ONELINK_BASE_URL = previous;
@@ -99,6 +102,23 @@ describe("OneLink", () => {
     const url = new URL(buildOnelink(secaucus));
     assert.equal(url.searchParams.get("af_sub1"), "07094");
     assert.equal(url.searchParams.get("af_sub2"), "HTL-07094-20261102-store-auditor-01");
+  });
+
+  it("selects the feed pid and keeps a single pid", () => {
+    assert.ok(nashua);
+    for (const [channel, pid] of [
+      ["adzuna", "Adzuna"],
+      ["ziprecruiter", "ZipRecruiter"],
+    ] as const) {
+      const href = buildOnelink(nashua, channel);
+      const url = new URL(href);
+      assert.equal(url.searchParams.get("pid"), pid);
+      assert.equal([...url.searchParams.keys()].filter((key) => key === "pid").length, 1);
+      assert.equal(url.searchParams.get("c"), "store-auditor");
+      assert.equal(url.searchParams.get("af_sub1"), "03060");
+      assert.equal(url.searchParams.get("af_sub2"), nashua.referencenumber);
+      assert.equal(href.includes("indeed_launch"), false);
+    }
   });
 });
 
@@ -141,8 +161,8 @@ describe("JobPosting", () => {
     });
   });
 
-  it("reads four jobs from data/jobs.json", () => {
-    const jobs = loadJobs();
+  it("reads the four sample fixtures", () => {
+    const jobs = sample;
     assert.equal(jobs.length, 4);
     const refs = jobs.map((job) => job.referencenumber);
     assert.equal(new Set(refs).size, refs.length);

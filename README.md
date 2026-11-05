@@ -1,8 +1,8 @@
 # Hetal Retail job feed
 
-Public job pages and an Indeed Job Sync XML feed for Hetal Retail store audits. Indeed reads `/feed.xml`. A Hetalite who clicks a listing lands on `/jobs/{referencenumber}` and can download the Hetal app.
+Public job pages and job feeds for Hetal Retail store audits. Indeed reads `/feed.xml`, Adzuna reads `/adzuna.xml`, and ZipRecruiter reads `/ziprecruiter.xml`. All three read `data/jobs.json`. A Hetalite who clicks a listing lands on `/jobs/{referencenumber}` and can download the Hetal app.
 
-Edit `data/jobs.json`. The feed and the pages both read that file. Closed jobs stay out of the feed, and their pages return HTTP 410.
+Closed jobs stay out of every feed, and their pages return HTTP 410.
 
 ## Run locally
 
@@ -23,17 +23,14 @@ With the dev server running:
 npm run validate-feed
 ```
 
-The script fetches `/feed.xml` and checks that:
+The script checks `/feed.xml`, `/adzuna.xml`, and `/ziprecruiter.xml`. It confirms that:
 
-- the XML is well formed and served as `application/xml`
-- every required field is present and wrapped in CDATA
-- descriptions are HTML, not HTML entities
-- reference numbers are unique
-- ZIP codes are 5 digits, including leading zeros
-- every feed URL returns 200 and the page title matches the listing
-- pay, city, state, ZIP, and description on the page match the feed
-- the download button keeps the base URL's `pid` and appends `c`, `af_sub1`, and `af_sub2`
-- closed jobs are absent from the feed and their pages return 410
+- each feed is well formed XML and lists every open job
+- closed jobs and the sample fixtures are absent
+- ZIP codes are 5 digits, including leading zeros, and reference numbers are unique
+- every feed URL returns 200 and the title, pay, city, state, ZIP, and description match
+- the download button uses that feed's `pid` and appends `c`, `af_sub1`, and `af_sub2`
+- a page opened with no channel keeps the Indeed `pid`
 
 Set `VALIDATE_BASE_URL` if the app is not on port 43123. Leave `SITE_URL` unset while validating locally so the feed URLs use the same host.
 
@@ -55,7 +52,25 @@ One object per visit:
 | `status` | `open` or `closed`. Only `open` jobs are in the feed. |
 | `date_posted` | `YYYY-MM-DD`. This is the date in the feed. Do not use a future date. |
 
-The three open sample visits are Nashua NH `HTL-03060-20261101-store-auditor-01`, Secaucus NJ `HTL-07094-20261102-store-auditor-01`, and Hackensack NJ `HTL-07601-20261103-store-auditor-01`. Cambridge MA `HTL-02139-20260915-store-auditor-01` is closed so the 410 page can be checked. It is not in the feed.
+`fixtures/sample-jobs.json` keeps the original sample visits for tests, including the closed Cambridge visit. They are not part of `data/jobs.json`.
+
+## Import the weekly sheet
+
+The live visits come from the Hetal Google Sheet (City, Zip, Metro, Date Added):
+
+[https://docs.google.com/spreadsheets/d/1jRI2rzi_JONSOLvSaBebV54QUV8wJe57tfV74zPcDwM/edit](https://docs.google.com/spreadsheets/d/1jRI2rzi_JONSOLvSaBebV54QUV8wJe57tfV74zPcDwM/edit)
+
+```bash
+npm run import-jobs
+```
+
+That downloads the published CSV. No Google sign-in is required. To use a local export instead:
+
+```bash
+npm run import-jobs -- path/to/jobs.csv
+```
+
+`IMPORT_WEEK` defaults to `2026-11-02`. The sheet has 60 rows on that date, one ZIP each, so the import writes 60 open jobs. Metro is stored for reporting and is left out of the pages and feeds. A visit stays open for 7 days from Date Added unless that reference number was already marked closed. Running the import again keeps those reference numbers and does not reuse them.
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 
@@ -65,11 +80,11 @@ The page is server rendered. It shows the title, pay, city, state, ZIP, and the 
 
 `{ONELINK_BASE_URL}&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`
 
-The base URL already contains `af_web_dp`, `af_xp=custom`, and `pid=Indeed`:
+The base URL already contains `af_web_dp`, `af_xp=custom`, and a `pid`:
 
 `https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`
 
-The visit params are appended with `&` and encoded. The button does not add `c=indeed_launch` or a second `pid`. ZIP codes stay 5-digit text, including a leading zero.
+The page replaces `pid` for the channel and appends `c`, `af_sub1`, and `af_sub2`. It does not add `c=indeed_launch` or a second `pid`. With no `channel` query, the button uses `pid=Indeed`. A feed link sets `channel` to `indeed`, `adzuna`, or `ziprecruiter`.
 
 The page also includes JobPosting JSON-LD. There is no apply form and no sign-in. Candidates apply in the app.
 
@@ -77,9 +92,15 @@ A closed job shows "This job is no longer available" and returns 410. An unknown
 
 ## Feed
 
-`GET /feed.xml` returns `Content-Type: application/xml`. The root is `<source>` with `<publisher>`, `<publisherurl>`, and one `<job>` per open job. Text fields are CDATA. Each job URL includes `source=Indeed`, which is what Indeed's Job Sync guide asks for.
+Each feed returns `Content-Type: application/xml` and lists only open jobs. Text fields are CDATA. The job URL includes `channel` and `source` for that board.
 
-The feed URL host follows the request, unless `SITE_URL` is set.
+| Feed | Path | Download `pid` |
+| --- | --- | --- |
+| Indeed | `/feed.xml` | `Indeed` |
+| Adzuna | `/adzuna.xml` | `Adzuna` |
+| ZipRecruiter | `/ziprecruiter.xml` | `ZipRecruiter` |
+
+The feed URL host follows the request, unless `SITE_URL` is set. Send each board its own URL, for example `https://jobs.hetalretail.com/feed.xml`.
 
 ## Environment
 
@@ -89,6 +110,9 @@ The feed URL host follows the request, unless `SITE_URL` is set.
 | `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `marketing@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
 | `SITE_URL` | Optional canonical origin for feed URLs. Leave unset until `jobs.hetalretail.com` answers. |
+| `JOBS_CSV_URL` | Optional sheet CSV. The default is the published Hetal sheet. |
+| `JOBS_CSV_PATH` | Optional local CSV export. Used instead of the URL when set. |
+| `IMPORT_WEEK` | Week to import, `YYYY-MM-DD` or `M/D/YY`. Default `2026-11-02`. |
 
 ## Deploy
 
@@ -98,10 +122,10 @@ This is a Next.js app meant for Vercel.
 2. Ask the client's DNS admin to CNAME `jobs.hetalretail.com` to the Vercel target (usually `cname.vercel-dns.com`).
 3. Add `jobs.hetalretail.com` as a domain on the Vercel project.
 4. Set `SITE_URL=https://jobs.hetalretail.com` and redeploy.
-5. Send `https://jobs.hetalretail.com/feed.xml` to Andy's Indeed representative. Indeed reads it about every 6 hours.
+5. Send each board its feed: `/feed.xml` to Indeed, `/adzuna.xml` to Adzuna, and `/ziprecruiter.xml` to ZipRecruiter.
 
 Until the CNAME exists, use the Vercel preview URL. Fetch `/feed.xml` on that host and confirm the job URLs use the same host.
 
 ## Not in this version
 
-No Google Sheet ingest, no daily title rotation, no scheduler, no apply form, no accounts, and no performance reporting. Those are later phases. Brand assets are a type wordmark until Hetal sends a logo.
+No Google sign-in, no daily title rotation, no scheduler, no apply form, no accounts, and no performance reporting. Those are later phases. Brand assets are a type wordmark until Hetal sends a logo.

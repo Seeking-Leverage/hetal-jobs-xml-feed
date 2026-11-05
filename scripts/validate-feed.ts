@@ -116,6 +116,30 @@ async function main() {
   const closed = jobs.filter((job) => job.status === "closed");
   ok(`${open.length} open and ${closed.length} closed in data/jobs.json`);
 
+  const week = "2026-11-02";
+  const fixtureRefs = [
+    "HTL-03060-20261101-store-auditor-01",
+    "HTL-07094-20261102-store-auditor-01",
+    "HTL-07601-20261103-store-auditor-01",
+    "HTL-02139-20260915-store-auditor-01",
+  ];
+  if (open.length !== 60 || open.some((job) => job.date_posted !== week)) {
+    fail(`expected 60 open jobs dated ${week}, found ${open.length}`);
+  } else {
+    ok("60 open jobs for 2026-11-02");
+  }
+  if (
+    new Set(open.map((job) => job.postalcode)).size !== open.length ||
+    open.some((job) => !/^\d{5}$/.test(job.postalcode))
+  ) {
+    fail("open jobs need a unique 5-digit ZIP");
+  } else {
+    ok("open ZIPs are unique 5-digit text");
+  }
+  const leaked = fixtureRefs.filter((ref) => jobs.some((job) => job.referencenumber === ref));
+  if (leaked.length > 0) fail(`sample fixtures are in the production file: ${leaked.join(", ")}`);
+  else ok("sample fixtures are not in the production file");
+
   let response: Response;
   try {
     response = await fetch(`${base}/feed.xml`, {
@@ -234,8 +258,6 @@ async function main() {
       fail(
         `${job.referencenumber} postalcode ${row.postalcode} does not match jobs.json ${job.postalcode}`,
       );
-    } else {
-      ok(`${job.referencenumber} ZIP ${row.postalcode}`);
     }
 
     const expected: Record<string, string> = {
@@ -276,6 +298,9 @@ async function main() {
     if (feedUrl.searchParams.get("source") !== "Indeed") {
       fail(`${job.referencenumber} url is missing source=Indeed`);
     }
+    if (feedUrl.searchParams.get("channel") !== "indeed") {
+      fail(`${job.referencenumber} url is missing channel=indeed`);
+    }
 
     const page = await fetch(feedUrl, {
       redirect: "manual",
@@ -292,8 +317,6 @@ async function main() {
       fail(
         `${job.referencenumber} page h1 is ${JSON.stringify(title)}, expected ${JSON.stringify(job.title)}`,
       );
-    } else {
-      ok(`${job.referencenumber} page returned 200 with a matching title`);
     }
 
     for (const snippet of [job.city, job.state, job.postalcode, job.pay, job.description_html]) {
@@ -303,8 +326,6 @@ async function main() {
     }
     if (!html.includes(`"postalCode":"${job.postalcode}"`)) {
       fail(`${job.referencenumber} JobPosting JSON-LD is missing postalCode ${job.postalcode}`);
-    } else {
-      ok(`${job.referencenumber} JSON-LD keeps ZIP ${job.postalcode}`);
     }
 
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => decodeHtml(match[1]));
@@ -354,8 +375,23 @@ async function main() {
           .map(([key]) => key)
           .join(", ")} (${applyHref})`,
       );
+    }
+  }
+  ok("Indeed pages match title, pay, location, description, and pid=Indeed");
+
+  if (open[0]) {
+    const plain = await fetch(`${base}/jobs/${encodeURIComponent(open[0].referencenumber)}`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(15000),
+    });
+    const plainHtml = await plain.text();
+    const plainHref = [...plainHtml.matchAll(/href="([^"]+)"/g)]
+      .map((match) => decodeHtml(match[1]))
+      .find((value) => value.includes("af_sub2="));
+    if (plain.status !== 200 || !plainHref || new URL(plainHref).searchParams.get("pid") !== "Indeed") {
+      fail("a job page without channel must keep the Indeed download link");
     } else {
-      ok(`${job.referencenumber} link keeps pid and appends c, af_sub1, and af_sub2`);
+      ok("job page without channel uses pid=Indeed");
     }
   }
 
@@ -383,6 +419,144 @@ async function main() {
     }
     ok(`${job.referencenumber} returns 410 and says the job is no longer available`);
   }
+
+  async function checkChannelFeed(options: {
+    path: string;
+    idTag: string;
+    pid: string;
+    channel: string;
+    tags: string[];
+  }) {
+    const response = await fetch(`${base}${options.path}`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(20000),
+    });
+    if (response.status !== 200) {
+      fail(`${options.path} returned ${response.status}, expected 200`);
+      return;
+    }
+    const type = response.headers.get("content-type") ?? "";
+    if (!type.includes("application/xml")) {
+      fail(`${options.path} Content-Type must include application/xml`);
+    }
+    const body = await response.text();
+    const parsed = XMLValidator.validate(body);
+    if (parsed !== true) {
+      fail(`${options.path} XML is not well formed: ${parsed.err.msg}`);
+      return;
+    }
+    if (ENTITY.test(body) || body.includes("<metro>")) {
+      fail(`${options.path} must keep text in CDATA and leave metro out of the feed`);
+    }
+    const blocks = [...body.matchAll(/<job>([\s\S]*?)<\/job>/g)].map((match) => match[1]);
+    if (blocks.length !== open.length) {
+      fail(`${options.path} has ${blocks.length} jobs, expected ${open.length} open jobs`);
+      return;
+    }
+    for (const job of closed) {
+      if (body.includes(`<![CDATA[${job.referencenumber}]]>`)) {
+        fail(`${options.path} includes closed job ${job.referencenumber}`);
+      }
+    }
+    for (const job of open) {
+      const block = blocks.find((entry) => cdataField(entry, options.idTag) === job.referencenumber);
+      if (!block) {
+        fail(`${options.path} is missing ${job.referencenumber}`);
+        continue;
+      }
+      for (const tagName of options.tags) {
+        const value = cdataField(block, tagName);
+        if (!value?.trim()) {
+          fail(`${options.path} ${job.referencenumber} is missing <${tagName}>`);
+          continue;
+        }
+        if (tagName === "description" && value !== job.description_html) {
+          fail(`${options.path} ${job.referencenumber} description does not match jobs.json`);
+        }
+        if (tagName === "title" && value !== job.title) {
+          fail(`${options.path} ${job.referencenumber} title does not match`);
+        }
+        if (tagName === "salary" && value !== job.pay) {
+          fail(`${options.path} ${job.referencenumber} pay does not match`);
+        }
+        if ((tagName === "postcode" || tagName === "postalcode") && value !== job.postalcode) {
+          fail(`${options.path} ${job.referencenumber} ZIP does not match`);
+        }
+        if (tagName === "city" && value !== job.city) {
+          fail(`${options.path} ${job.referencenumber} city does not match`);
+        }
+        if (tagName === "state" && value !== job.state) {
+          fail(`${options.path} ${job.referencenumber} state does not match`);
+        }
+        if (tagName === "location" && value !== `${job.city}, ${job.state}`) {
+          fail(`${options.path} ${job.referencenumber} location does not match`);
+        }
+      }
+      const urlValue = cdataField(block, "url");
+      if (!urlValue) continue;
+      const feedUrl = new URL(urlValue);
+      if (feedUrl.searchParams.get("channel") !== options.channel) {
+        fail(`${options.path} ${job.referencenumber} url is missing channel=${options.channel}`);
+      }
+      const page = await fetch(feedUrl, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(15000),
+      });
+      const html = await page.text();
+      if (page.status !== 200) {
+        fail(`${feedUrl} returned ${page.status}, expected 200`);
+        continue;
+      }
+      if (
+        h1Text(html) !== job.title ||
+        !html.includes(job.pay) ||
+        !html.includes(job.postalcode) ||
+        !html.includes(job.description_html)
+      ) {
+        fail(`${options.path} ${job.referencenumber} page does not match the job`);
+      }
+      const href = [...html.matchAll(/href="([^"]+)"/g)]
+        .map((match) => decodeHtml(match[1]))
+        .find((value) => {
+          try {
+            return new URL(value).searchParams.get("af_sub2") === job.referencenumber;
+          } catch {
+            return false;
+          }
+        });
+      if (!href) {
+        fail(`${options.path} ${job.referencenumber} page is missing the download link`);
+        continue;
+      }
+      const apply = new URL(href);
+      const pidCount = [...apply.searchParams.keys()].filter((key) => key === "pid").length;
+      if (
+        pidCount !== 1 ||
+        apply.searchParams.get("pid") !== options.pid ||
+        apply.searchParams.get("c") !== job.title_id ||
+        apply.searchParams.get("af_sub1") !== job.postalcode ||
+        apply.searchParams.get("af_sub2") !== job.referencenumber
+      ) {
+        fail(`${options.path} ${job.referencenumber} download link does not match ${options.pid}`);
+      }
+    }
+    ok(`${options.path} lists every open job and uses pid=${options.pid}`);
+  }
+
+  await checkChannelFeed({
+    path: "/adzuna.xml",
+    idTag: "id",
+    pid: "Adzuna",
+    channel: "adzuna",
+    tags: ["title", "description", "url", "location", "postcode", "country", "salary", "company"],
+  });
+  await checkChannelFeed({
+    path: "/ziprecruiter.xml",
+    idTag: "referencenumber",
+    pid: "ZipRecruiter",
+    channel: "ziprecruiter",
+    tags: ["title", "description", "url", "city", "state", "country", "postalcode", "salary", "company"],
+  });
 
   const missing = await fetch(`${base}/jobs/HTL-DOES-NOT-EXIST`, {
     redirect: "manual",

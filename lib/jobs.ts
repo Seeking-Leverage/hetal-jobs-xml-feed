@@ -151,6 +151,25 @@ function normalizeJob(value: unknown, index: number): Job {
     );
   }
 
+  let metro: string | undefined;
+  if (record.metro !== undefined && record.metro !== "") {
+    if (typeof record.metro !== "string") {
+      throw new JobsDataError(`jobs[${index}].metro must be text. It is kept for reporting only.`);
+    }
+    metro = record.metro.trim();
+    assertNoEntities("metro", metro, index);
+  }
+
+  let valid_through: string | undefined;
+  if (typeof record.valid_through === "string" && record.valid_through.trim() !== "") {
+    valid_through = record.valid_through.trim();
+    if (!DATE_PATTERN.test(valid_through) || Number.isNaN(Date.parse(`${valid_through}T00:00:00Z`))) {
+      throw new JobsDataError(
+        `jobs[${index}].valid_through must be an ISO-8601 date, YYYY-MM-DD.`,
+      );
+    }
+  }
+
   const requisitionid = requiredString(record, "requisitionid", index);
   const fields: Record<string, string> = {
     referencenumber,
@@ -177,18 +196,19 @@ function normalizeJob(value: unknown, index: number): Job {
     state,
     country,
     postalcode,
+    ...(metro ? { metro } : {}),
     pay,
     jobtype: jobtype as JobType,
     description_html,
     status: status as JobStatus,
     date_posted,
+    ...(valid_through ? { valid_through } : {}),
   };
 }
 
-export function loadJobs(): Job[] {
-  const source = readJobsSource();
+export function parseJobs(source: unknown): Job[] {
   if (!Array.isArray(source)) {
-    throw new JobsDataError("data/jobs.json must be an array of jobs.");
+    throw new JobsDataError("jobs must be an array.");
   }
 
   const jobs = source.map((entry, index) => normalizeJob(entry, index));
@@ -202,6 +222,10 @@ export function loadJobs(): Job[] {
     seen.add(job.referencenumber);
   }
   return jobs;
+}
+
+export function loadJobs(): Job[] {
+  return parseJobs(readJobsSource());
 }
 
 export function decodeReferencenumber(value: string): string {

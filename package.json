@@ -8,6 +8,7 @@
     "start": "next start --hostname 0.0.0.0 --port 43123",
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
+    "import-jobs": "tsx scripts/import-jobs.ts",
     "validate-feed": "tsx scripts/validate-feed.ts"
   },
   "dependencies": {

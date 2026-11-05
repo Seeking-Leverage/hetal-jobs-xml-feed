@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 
 import { JobsError } from "@/components/jobs-error";
 import { OpenJob } from "@/components/job-view";
+import { parseChannel } from "@/lib/channels";
 import { JobsDataError, siteUrlFrom } from "@/lib/config";
 import { findJob } from "@/lib/jobs";
 
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 type JobPageProps = {
   params: Promise<{ referencenumber: string }>;
+  searchParams: Promise<{ channel?: string | string[] }>;
 };
 
 export async function generateMetadata({ params }: JobPageProps): Promise<Metadata> {
@@ -35,8 +37,9 @@ export async function generateMetadata({ params }: JobPageProps): Promise<Metada
   }
 }
 
-export default async function JobPage({ params }: JobPageProps) {
+export default async function JobPage({ params, searchParams }: JobPageProps) {
   const { referencenumber } = await params;
+  const { channel } = await searchParams;
   let job;
   try {
     job = findJob(referencenumber);
@@ -48,5 +51,7 @@ export default async function JobPage({ params }: JobPageProps) {
   }
   if (!job || job.status === "closed") notFound();
   const headerList = await headers();
-  return <OpenJob job={job} siteUrl={siteUrlFrom(headerList)} />;
+  return (
+    <OpenJob job={job} siteUrl={siteUrlFrom(headerList)} channel={parseChannel(channel)} />
+  );
 }

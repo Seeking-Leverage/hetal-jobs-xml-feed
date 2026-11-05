@@ -1,10 +1,19 @@
+import { CHANNEL_PID, type Channel } from "./channels";
 import { getOnelinkBaseUrl } from "./config";
 import type { Job } from "./types";
 
 export function buildOnelink(
   job: Pick<Job, "title_id" | "postalcode" | "referencenumber">,
+  channel: Channel = "indeed",
 ): string {
   const base = getOnelinkBaseUrl().replace(/[?&]$/, "");
+  const url = new URL(base);
+  // Replace the base pid for this channel. Do not add a second pid.
+  url.searchParams.set("pid", CHANNEL_PID[channel]);
+  url.searchParams.delete("c");
+  url.searchParams.delete("af_sub1");
+  url.searchParams.delete("af_sub2");
+  const withPid = url.toString().replace(/[?&]$/, "");
   const added = [
     ["c", job.title_id],
     ["af_sub1", job.postalcode],
@@ -12,8 +21,6 @@ export function buildOnelink(
   ]
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
-  // The base already includes af_web_dp, af_xp, and pid=Indeed.
-  // Append only the visit params. Do not add another pid or c=indeed_launch.
-  const joiner = base.includes("?") ? "&" : "?";
-  return `${base}${joiner}${added}`;
+  const joiner = withPid.includes("?") ? "&" : "?";
+  return `${withPid}${joiner}${added}`;
 }

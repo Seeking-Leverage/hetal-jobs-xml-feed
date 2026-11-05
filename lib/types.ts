@@ -13,9 +13,13 @@ export type Job = {
   state: string;
   country: string;
   postalcode: string;
+  /** Reporting only. Not shown on the page or in a feed. */
+  metro?: string;
   pay: string;
   jobtype: JobType;
   description_html: string;
   status: JobStatus;
   date_posted: string;
+  /** Last day the visit stays open, inclusive. Seven days from date_posted. */
+  valid_through?: string;
 };

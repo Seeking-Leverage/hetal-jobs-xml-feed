@@ -4,7 +4,11 @@ Live feed URL, once `SITE_URL` is the public origin:
 
 `https://jobs.hetalretail.com/feed.xml`
 
-Until `jobs.hetalretail.com` is attached, leave `SITE_URL` empty and give Indeed the Vercel origin with `/feed.xml` on the end. The feed lists only the jobs with `status` `open` in `data/jobs.json`.
+Until `jobs.hetalretail.com` is attached, leave `SITE_URL` empty and give each board the Vercel origin plus its feed path. Every feed lists only the jobs with `status` `open` in `data/jobs.json`.
+
+- Indeed: `{SITE_URL}/feed.xml`
+- Adzuna: `{SITE_URL}/adzuna.xml`
+- ZipRecruiter: `{SITE_URL}/ziprecruiter.xml`
 
 `FEED_CONTACT_EMAIL` is the `<email>` inside every job. The default is `marketing@hetalretail.com`. Use that address on the Indeed employer account.
 
@@ -25,7 +29,7 @@ Each `referencenumber` is `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}`, for example `H
 5. Send this:
    - Company: Hetal Retail
    - Website: the `SITE_URL` origin
-   - XML feed URL: `{SITE_URL}/feed.xml`
+   - XML feed URL: `{SITE_URL}/feed.xml` for Indeed, `{SITE_URL}/adzuna.xml` for Adzuna, or `{SITE_URL}/ziprecruiter.xml` for ZipRecruiter
    - Contact email: `marketing@hetalretail.com`
    - Ask Indeed to crawl the Job Sync XML feed and add the open jobs to the employer account.
 6. Keep at least 3 open jobs in the feed. Indeed does not process a smaller feed.
