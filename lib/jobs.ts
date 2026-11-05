@@ -9,7 +9,7 @@ const ENTITY = /&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]+);/;
 const PAY_PATTERN =
   /^\$\d+(?:\.\d{2})?(?: - \$\d+(?:\.\d{2})?)? per (?:audit|hour|day|week|month|year)$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$/;
+const REF_PATTERN = /^HTL-\d{5}-\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TITLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const STATE_PATTERN = /^[A-Z]{2}$/;
 
@@ -79,7 +79,7 @@ function normalizeJob(value: unknown, index: number): Job {
   const referencenumber = requiredString(record, "referencenumber", index);
   if (!REF_PATTERN.test(referencenumber)) {
     throw new JobsDataError(
-      `jobs[${index}].referencenumber must be 2 to 64 letters, numbers, hyphens, or underscores.`,
+      `jobs[${index}].referencenumber must look like HTL-03060-20261109-store-auditor: HTL, a 5-digit ZIP, YYYYMMDD, and a lowercase hyphenated title slug.`,
     );
   }
 
@@ -142,6 +142,14 @@ function normalizeJob(value: unknown, index: number): Job {
     );
   }
 
+  const postalcode = normalizePostalCode(record.postalcode, index);
+  const expectedRef = `HTL-${postalcode}-${date_posted.replaceAll("-", "")}-${title_id}`;
+  if (referencenumber !== expectedRef) {
+    throw new JobsDataError(
+      `jobs[${index}].referencenumber must be ${expectedRef}. Keep a published reference number forever, and do not reuse it for another title, date, or job.`,
+    );
+  }
+
   const requisitionid = requiredString(record, "requisitionid", index);
   const fields: Record<string, string> = {
     referencenumber,
@@ -167,7 +175,7 @@ function normalizeJob(value: unknown, index: number): Job {
     city,
     state,
     country,
-    postalcode: normalizePostalCode(record.postalcode, index),
+    postalcode,
     pay,
     jobtype: jobtype as JobType,
     description_html,

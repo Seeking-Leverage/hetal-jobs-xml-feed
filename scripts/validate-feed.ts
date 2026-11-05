@@ -218,6 +218,13 @@ async function main() {
       continue;
     }
 
+    const expectedRef = `HTL-${job.postalcode}-${job.date_posted.replaceAll("-", "")}-${job.title_id}`;
+    if (row.referencenumber !== expectedRef) {
+      fail(
+        `${job.referencenumber} must be ${expectedRef} so the feed, page, and af_sub2 share one permanent id`,
+      );
+    }
+
     if (!/^\d{5}$/.test(row.postalcode)) {
       fail(`${job.referencenumber} postalcode must be 5 digits, received ${row.postalcode}`);
     } else if (row.postalcode !== job.postalcode) {
