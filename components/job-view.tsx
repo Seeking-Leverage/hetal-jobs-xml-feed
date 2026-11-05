@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { Channel } from "@/lib/channels";
-import { formatJobType, formatLongDate } from "@/lib/format";
+import { formatLongDate } from "@/lib/format";
 import { buildJobPosting, serializeJsonLd } from "@/lib/jsonld";
 import { buildOnelink } from "@/lib/onelink";
 import type { Job } from "@/lib/types";
@@ -31,7 +31,7 @@ export function JobList({ jobs }: { jobs: Job[] }) {
               {job.city}, {job.state} {job.postalcode}
             </span>
             <span className="mt-1 block text-sm text-muted-foreground">
-              {formatJobType(job.jobtype)} · Posted {formatLongDate(job.date_posted)}
+              Posted {formatLongDate(job.date_posted)}
             </span>
           </Link>
         </li>
@@ -76,7 +76,7 @@ export function OpenJob({
         dangerouslySetInnerHTML={{ __html: job.description_html }}
       />
       <p className="mt-8 text-sm text-muted-foreground">
-        {`${formatJobType(job.jobtype)} · Posted ${formatLongDate(job.date_posted)}${
+        {`Posted ${formatLongDate(job.date_posted)}${
           job.valid_through ? ` · Open through ${formatLongDate(job.valid_through)}` : ""
         }. Reference `}
         <span translate="no">{job.referencenumber}</span>.

@@ -1,15 +1,3 @@
-import type { JobType } from "./types";
-
-const JOB_TYPE_LABELS: Record<JobType, string> = {
-  "part-time": "Part-time",
-  "full-time": "Full-time",
-  contract: "Independent contractor",
-};
-
-export function formatJobType(jobtype: JobType): string {
-  return JOB_TYPE_LABELS[jobtype];
-}
-
 const MONTHS = [
   "January",
   "February",

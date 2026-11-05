@@ -123,10 +123,24 @@ async function main() {
     "HTL-07601-20261103-store-auditor-01",
     "HTL-02139-20260915-store-auditor-01",
   ];
-  if (open.length !== 60 || open.some((job) => job.date_posted !== week)) {
-    fail(`expected 60 open jobs dated ${week}, found ${open.length}`);
+  const nashua = open.find((job) => job.postalcode === "03060");
+  const sheetOpen = open.filter((job) => job.postalcode !== "03060");
+  const previousNashua = jobs.find(
+    (job) => job.referencenumber === "HTL-03060-20261102-store-auditor-01",
+  );
+  if (
+    open.length !== 60 ||
+    sheetOpen.length !== 59 ||
+    sheetOpen.some((job) => job.date_posted !== week) ||
+    nashua?.referencenumber !== "HTL-03060-20261105-mystery-shopper-01" ||
+    nashua.title !== "Mystery Shopper" ||
+    previousNashua?.status !== "closed"
+  ) {
+    fail(
+      `expected 59 open jobs dated ${week} plus Nashua Mystery Shopper, found ${open.length} open`,
+    );
   } else {
-    ok("60 open jobs for 2026-11-02");
+    ok("59 sheet jobs for 2026-11-02 and Nashua's approved Thursday title");
   }
   if (
     new Set(open.map((job) => job.postalcode)).size !== open.length ||

@@ -57,6 +57,7 @@ describe("jobs.json", () => {
         true,
       );
       assert.equal(job.description_html.includes("per hour"), false);
+      assert.equal(/contractor/i.test(job.description_html), false);
       assert.equal(job.description_html.includes("part-time"), false);
       return job.description_html;
     });

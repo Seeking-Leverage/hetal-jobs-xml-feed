@@ -264,14 +264,22 @@ describe("committed title schedule", () => {
     const zips = new Set(jobs.filter((job) => job.metro).map((job) => job.postalcode));
     assert.equal(schedule.week_of, "2026-11-02");
     assert.equal(schedule.slots.length, zips.size * 3);
-    assert.equal(schedule.slots.every((item) => item.approved === false), true);
+    const approved = schedule.slots.filter((item) => item.approved);
+    assert.equal(approved.length, 1);
+    assert.equal(approved[0].postalcode, "03060");
+    assert.equal(approved[0].date, "2026-11-05");
+    assert.equal(approved[0].title_id, "mystery-shopper");
     const byZip = new Map<string, string[]>();
     const refs = new Set(jobs.map((job) => job.referencenumber));
     for (const item of schedule.slots) {
       const days = byZip.get(item.postalcode) ?? [];
       days.push(item.date);
       byZip.set(item.postalcode, days);
-      assert.equal(refs.has(item.referencenumber), false);
+      if (item.approved) {
+        assert.equal(jobs.find((job) => job.referencenumber === item.referencenumber)?.status, "open");
+      } else {
+        assert.equal(refs.has(item.referencenumber), false);
+      }
       assert.match(
         item.referencenumber,
         new RegExp(`^HTL-${item.postalcode}-${item.date.replaceAll("-", "")}-${item.title_id}-\\d{2}$`),
