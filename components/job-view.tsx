@@ -76,7 +76,9 @@ export function OpenJob({
         dangerouslySetInnerHTML={{ __html: job.description_html }}
       />
       <p className="mt-8 text-sm text-muted-foreground">
-        {formatJobType(job.jobtype)} · Posted {formatLongDate(job.date_posted)}. Reference{" "}
+        {`${formatJobType(job.jobtype)} · Posted ${formatLongDate(job.date_posted)}${
+          job.valid_through ? ` · Open through ${formatLongDate(job.valid_through)}` : ""
+        }. Reference `}
         <span translate="no">{job.referencenumber}</span>.
       </p>
     </article>

@@ -10,7 +10,9 @@
     "test": "tsx --test tests/*.test.ts",
     "import-jobs": "tsx scripts/import-jobs.ts",
     "generate-schedule": "tsx scripts/generate-schedule.ts",
-    "validate-feed": "tsx scripts/validate-feed.ts"
+    "validate-feed": "tsx scripts/validate-feed.ts",
+    "validate-structured-data": "tsx scripts/validate-structured-data.ts",
+    "notify-google": "tsx scripts/notify-google.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

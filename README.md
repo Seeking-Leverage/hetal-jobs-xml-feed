@@ -104,9 +104,42 @@ The base URL already contains `af_web_dp`, `af_xp=custom`, and a `pid`:
 
 The page replaces `pid` for the channel and appends `c`, `af_sub1`, and `af_sub2`. It does not add `c=indeed_launch` or a second `pid`. With no `channel` query, the button uses `pid=Indeed`. A feed link sets `channel` to `indeed`, `adzuna`, or `ziprecruiter`.
 
-The page also includes JobPosting JSON-LD. There is no apply form and no sign-in. Candidates apply in the app.
+The page also includes JobPosting JSON-LD for Google for Jobs. There is no apply form and no sign-in. Candidates apply in the app.
 
-A closed job shows "This job is no longer available" and returns 410. An unknown reference number returns 404.
+The canonical URL is `/jobs/{referencenumber}` with no `channel` or `source` query. A feed link may add those parameters, and the page still points Google at the permanent URL. `/sitemap.xml` lists the home page and the open jobs only.
+
+A closed job shows "This job is no longer available", returns 410, and does not include JobPosting markup. An unknown reference number returns 404.
+
+## Google for Jobs
+
+Google requires `datePosted`, `description`, `hiringOrganization`, `jobLocation.address.addressCountry`, and `title`. Each one matches the visible page: the title, the full HTML description, Hetal Retail, the city, state, ZIP, and country, and the posted date. A visit with `valid_through` also sends `validThrough` as the end of that day in America/New_York, and the page says "Open through" that date. `directApply` is false because the button leaves this site. Pay stays `$6 - $17 per audit` on the page and in the XML feeds. It is not copied into `baseSalary`, because Google only accepts `HOUR`, `DAY`, `WEEK`, `MONTH`, and `YEAR`.
+
+```bash
+npm run validate-structured-data
+```
+
+With the dev server running, that checks the JSON-LD, the canonical URL, the visible text, and `/sitemap.xml`.
+
+Manual checks, after the public host is live:
+
+1. Open [Google's Rich Results Test](https://search.google.com/test/rich-results) and enter one canonical job URL, such as `https://jobs.hetalretail.com/jobs/HTL-03060-20261102-store-auditor-01`. Confirm the detected type is JobPosting and the required properties match the page.
+2. In Search Console, use URL Inspection on that same URL. The inspected URL must be the permanent `/jobs/{referencenumber}` address, not a feed URL with `channel`.
+3. Inspect a closed job URL and confirm Google sees HTTP 410 and no JobPosting.
+
+To tell Google when a job is published, updated, or closed:
+
+```bash
+npm run notify-google -- --dry-run
+npm run notify-google
+```
+
+The first run lists every open job as published. Later runs send `URL_UPDATED` when the page content changes and `URL_DELETED` when a previously sent job is closed or removed. `URL_DELETED` is sent only after the page returns 410. One visit can be sent on its own:
+
+```bash
+npm run notify-google -- --reference HTL-03060-20261102-store-auditor-01 --action published
+```
+
+`SITE_URL` must be the public `https` origin. Set `GOOGLE_INDEXING_CLIENT_EMAIL` and `GOOGLE_INDEXING_PRIVATE_KEY` in `.env.local`. Enable the Indexing API on the Google Cloud project, and add the service account as an owner of the Search Console property. Do not commit the key. The default quota is 200 publish requests a day.
 
 ## Feed
 
@@ -131,6 +164,8 @@ The feed URL host follows the request, unless `SITE_URL` is set. Send each board
 | `JOBS_CSV_URL` | Optional sheet CSV. The default is the published Hetal sheet. |
 | `JOBS_CSV_PATH` | Optional local CSV export. Used instead of the URL when set. |
 | `IMPORT_WEEK` | Week to import, `YYYY-MM-DD` or `M/D/YY`. Default `2026-11-02`. |
+| `GOOGLE_INDEXING_CLIENT_EMAIL` | Service account that owns the Search Console property. Used only by `npm run notify-google`. |
+| `GOOGLE_INDEXING_PRIVATE_KEY` | PEM private key for that service account. Store it in `.env.local`. |
 
 ## Deploy
 
@@ -146,4 +181,4 @@ Until the CNAME exists, use the Vercel preview URL. Fetch `/feed.xml` on that ho
 
 ## Not in this version
 
-No Google sign-in, no unattended publisher, no apply form, no accounts, and no performance reporting. A title goes live only after Andy approves it in `data/title-schedule.json` and runs `npm run generate-schedule`.
+No Google user sign-in, no unattended publisher, no apply form, no accounts, and no performance reporting. `npm run notify-google` uses a service account when you choose to run it. A title goes live only after Andy approves it in `data/title-schedule.json` and runs `npm run generate-schedule`.

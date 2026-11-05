@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local research notes
 /agent-tools/
+
+# Last Google Indexing API notification. Recreated by npm run notify-google.
+/data/indexing-state.json

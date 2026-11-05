@@ -149,16 +149,10 @@ describe("JobPosting", () => {
     assert.equal(typeof location.address.postalCode, "string");
     assert.equal(location.address.postalCode, "03060");
     assert.equal(location.address.addressRegion, "NH");
-    assert.deepEqual(schema.baseSalary, {
-      "@type": "MonetaryAmount",
-      currency: "USD",
-      value: {
-        "@type": "QuantitativeValue",
-        unitText: "PIECE",
-        minValue: 6,
-        maxValue: 17,
-      },
-    });
+    assert.equal("baseSalary" in schema, false);
+    assert.equal(nashua.pay, "$6 - $17 per audit");
+    assert.equal(schema.description.includes("$6 to $17 per audit, depending on size"), true);
+    assert.equal(schema.url, "http://127.0.0.1:43123/jobs/HTL-03060-20261101-store-auditor-01");
   });
 
   it("reads the four sample fixtures", () => {

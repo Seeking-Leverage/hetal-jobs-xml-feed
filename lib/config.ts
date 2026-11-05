@@ -4,6 +4,9 @@ const DEFAULT_ONELINK_BASE_URL =
   "https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed";
 const DEFAULT_SITE_URL = "http://127.0.0.1:43123";
 
+/** Marketing site. JobPosting.hiringOrganization.sameAs uses this, and the header links here. */
+export const COMPANY_SITE_URL = "https://www.hetalretail.com";
+
 export class JobsDataError extends Error {
   constructor(message: string) {
     super(message);

@@ -7,6 +7,7 @@ import { OpenJob } from "@/components/job-view";
 import { parseChannel } from "@/lib/channels";
 import { JobsDataError, siteUrlFrom } from "@/lib/config";
 import { findJob } from "@/lib/jobs";
+import { jobCanonicalUrl } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: JobPageProps): Promise<Metada
       title: job.title,
       description: `${job.title} in ${job.city}, ${job.state} ${job.postalcode}. ${job.pay}.`,
       alternates: {
-        canonical: new URL(`/jobs/${encodeURIComponent(job.referencenumber)}`, siteUrl).toString(),
+        canonical: jobCanonicalUrl(siteUrl, job.referencenumber),
       },
       robots: { index: true, follow: true },
     };
