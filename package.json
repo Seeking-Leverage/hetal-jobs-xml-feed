@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
     "import-jobs": "tsx scripts/import-jobs.ts",
+    "generate-schedule": "tsx scripts/generate-schedule.ts",
     "validate-feed": "tsx scripts/validate-feed.ts"
   },
   "dependencies": {

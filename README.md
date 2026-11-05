@@ -74,6 +74,24 @@ npm run import-jobs -- path/to/jobs.csv
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 
+## Weekly title test
+
+Each ZIP tries three titles in one week. `data/titles.json` is the catalog, in order:
+
+1. Tuesday: On-Demand Store Auditor (`store-auditor`)
+2. Wednesday: Retail Merchandiser (`retail-merchandiser`)
+3. Thursday: Mystery Shopper (`mystery-shopper`)
+
+Friday, Saturday, and Sunday keep Thursday's title and the same reference number. Monday closes the previous week's job. The new week's Tuesday job is created only when that slot is approved.
+
+```bash
+npm run generate-schedule
+```
+
+That writes `data/title-schedule.json` from the sheet ZIPs in `data/jobs.json` and the three titles. Every slot starts with `"approved": false`. Andy can edit a title and set `"approved": true`, then run the command again. Approved flags and title edits are kept. Unapproved slots stay out of every feed.
+
+Only the approved job for today can replace the live visit. That publish closes the previous job for the ZIP and leaves it in `data/jobs.json`. Closed pages return 410. A ZIP never has two open jobs. Reference numbers stay `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` and are never reused. The page title, every feed, and the OneLink `c` value all use that job's title. `af_sub2` is its reference number.
+
 ## What a job page does
 
 The page is server rendered. It shows the title, pay, city, state, ZIP, and the same HTML description Indeed receives. One button, **Download the Hetal app**, links to the OneLink:
@@ -128,4 +146,4 @@ Until the CNAME exists, use the Vercel preview URL. Fetch `/feed.xml` on that ho
 
 ## Not in this version
 
-No Google sign-in, no daily title rotation, no scheduler, no apply form, no accounts, and no performance reporting. Those are later phases. Brand assets are a type wordmark until Hetal sends a logo.
+No Google sign-in, no unattended publisher, no apply form, no accounts, and no performance reporting. A title goes live only after Andy approves it in `data/title-schedule.json` and runs `npm run generate-schedule`.
