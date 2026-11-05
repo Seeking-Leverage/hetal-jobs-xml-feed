@@ -57,7 +57,7 @@ One object per visit:
 
 The three open sample visits are Nashua NH `03060`, Secaucus NJ `07094`, and Hackensack NJ `07601`. Cambridge MA `02139` is closed so the 410 page can be checked. It is not in the feed.
 
-The contact email is a placeholder until Hetal sends the real address. Pay is `$6 - $17 per audit`.
+Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 
 ## What a job page does
 
@@ -82,7 +82,7 @@ The feed URL host follows the request, unless `SITE_URL` is set.
 | Variable | Purpose |
 | --- | --- |
 | `ONELINK_BASE_URL` | Download link base. Default `https://app.hetalretail.com/sfUI?af_xp=custom&pid=job-board-xml`. |
-| `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `jobs@hetalretail.com`. |
+| `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `marketing@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
 | `SITE_URL` | Optional canonical origin for feed URLs. Leave unset until `jobs.hetalretail.com` answers. |
 

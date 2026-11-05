@@ -1,5 +1,5 @@
 const DEFAULT_COMPANY_NAME = "Hetal Retail";
-const DEFAULT_FEED_EMAIL = "jobs@hetalretail.com";
+const DEFAULT_FEED_EMAIL = "marketing@hetalretail.com";
 const DEFAULT_ONELINK_BASE_URL =
   "https://app.hetalretail.com/sfUI?af_xp=custom&pid=job-board-xml";
 const DEFAULT_SITE_URL = "http://127.0.0.1:43123";
