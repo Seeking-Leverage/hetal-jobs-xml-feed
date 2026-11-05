@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { getOnelinkBaseUrl } from "../lib/config";
+import { getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { buildJobPosting } from "../lib/jsonld";
 import { findJob, loadJobs, openJobs } from "../lib/jobs";
 import { buildOnelink } from "../lib/onelink";
@@ -62,22 +62,36 @@ describe("jobs.json", () => {
   });
 });
 
+const ONELINK_BASE =
+  "https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed";
+
 describe("OneLink", () => {
-  it("keeps the Hetal pid and appends the campaign, ZIP, and reference", () => {
+  it("keeps pid=Indeed and appends only the campaign, ZIP, and reference", () => {
     assert.ok(nashua);
-    const href = buildOnelink(nashua);
-    assert.equal(
-      href,
-      "https://app.hetalretail.com/sfUI?af_xp=custom&pid=job-board-xml&c=store-auditor&af_sub1=03060&af_sub2=HTL-03060",
-    );
-    assert.equal(getOnelinkBaseUrl().includes("pid=indeed"), false);
-    const url = new URL(href);
-    assert.equal(url.searchParams.get("pid"), "job-board-xml");
-    assert.equal([...url.searchParams.keys()].filter((key) => key === "pid").length, 1);
-    assert.equal(url.searchParams.get("c"), "store-auditor");
-    assert.equal(url.searchParams.get("af_sub1"), "03060");
-    assert.equal(url.searchParams.get("af_sub2"), "HTL-03060");
-    assert.equal(href.includes("&c="), true);
+    const previous = process.env.ONELINK_BASE_URL;
+    delete process.env.ONELINK_BASE_URL;
+    try {
+      const href = buildOnelink(nashua);
+      assert.equal(
+        href,
+        `${ONELINK_BASE}&c=store-auditor&af_sub1=03060&af_sub2=HTL-03060`,
+      );
+      assert.equal(getOnelinkBaseUrl(), ONELINK_BASE);
+      assert.equal(href.includes("app.hetalretail.com"), false);
+      assert.equal(href.includes("indeed_launch"), false);
+      const url = new URL(href);
+      assert.equal(url.searchParams.get("pid"), "Indeed");
+      assert.equal([...url.searchParams.keys()].filter((key) => key === "pid").length, 1);
+      assert.equal([...url.searchParams.keys()].filter((key) => key === "c").length, 1);
+      assert.equal(url.searchParams.get("c"), "store-auditor");
+      assert.equal(url.searchParams.get("af_web_dp"), "http://indeed.hetalretail.com/");
+      assert.equal(url.searchParams.get("af_sub1"), "03060");
+      assert.equal(url.searchParams.get("af_sub2"), "HTL-03060");
+      assert.equal(href.includes("&c="), true);
+    } finally {
+      if (previous === undefined) delete process.env.ONELINK_BASE_URL;
+      else process.env.ONELINK_BASE_URL = previous;
+    }
   });
 
   it("keeps the ZIP leading zero for Secaucus", () => {
@@ -85,6 +99,19 @@ describe("OneLink", () => {
     const url = new URL(buildOnelink(secaucus));
     assert.equal(url.searchParams.get("af_sub1"), "07094");
     assert.equal(url.searchParams.get("af_sub2"), "HTL-07094");
+  });
+});
+
+describe("feed contact", () => {
+  it("defaults the feed email to marketing@hetalretail.com", () => {
+    const previous = process.env.FEED_CONTACT_EMAIL;
+    delete process.env.FEED_CONTACT_EMAIL;
+    try {
+      assert.equal(getFeedEmail(), "marketing@hetalretail.com");
+    } finally {
+      if (previous === undefined) delete process.env.FEED_CONTACT_EMAIL;
+      else process.env.FEED_CONTACT_EMAIL = previous;
+    }
   });
 });
 

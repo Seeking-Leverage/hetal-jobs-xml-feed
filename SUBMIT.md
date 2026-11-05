@@ -6,7 +6,13 @@ Live feed URL, once `SITE_URL` is the public origin:
 
 Until `jobs.hetalretail.com` is attached, leave `SITE_URL` empty and give Indeed the Vercel origin with `/feed.xml` on the end. The feed lists only the jobs with `status` `open` in `data/jobs.json`.
 
-`FEED_CONTACT_EMAIL` is the `<email>` inside every job. It is `marketing@hetalretail.com` unless that variable overrides it. Use the email on the Indeed employer account.
+`FEED_CONTACT_EMAIL` is the `<email>` inside every job. The default is `marketing@hetalretail.com`. Use that address on the Indeed employer account.
+
+The download button uses this OneLink and appends only `&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`:
+
+`https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`
+
+Do not add `c=indeed_launch` to that base URL, and do not add a second `pid`. ZIP codes stay 5-digit text.
 
 ## Checklist
 

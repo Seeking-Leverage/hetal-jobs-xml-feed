@@ -13,7 +13,7 @@ npm run dev
 
 Open [http://127.0.0.1:43123](http://127.0.0.1:43123). The feed is [http://127.0.0.1:43123/feed.xml](http://127.0.0.1:43123/feed.xml).
 
-Copy `.env.example` to `.env.local` when you have the real OneLink, contact email, or company name. The app runs without that file and uses the placeholders below.
+Copy `.env.example` to `.env.local` to override the download link, contact email, or company name. The app runs without that file and uses the defaults below.
 
 ## Validate the feed
 
@@ -65,7 +65,11 @@ The page is server rendered. It shows the title, pay, city, state, ZIP, and the 
 
 `{ONELINK_BASE_URL}&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`
 
-The base URL already contains `?af_xp=custom&pid=job-board-xml`, so the visit params are appended with `&` and encoded. The button does not add a second `pid`.
+The base URL already contains `af_web_dp`, `af_xp=custom`, and `pid=Indeed`:
+
+`https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`
+
+The visit params are appended with `&` and encoded. The button does not add `c=indeed_launch` or a second `pid`. ZIP codes stay 5-digit text, including a leading zero.
 
 The page also includes JobPosting JSON-LD. There is no apply form and no sign-in. Candidates apply in the app.
 
@@ -81,7 +85,7 @@ The feed URL host follows the request, unless `SITE_URL` is set.
 
 | Variable | Purpose |
 | --- | --- |
-| `ONELINK_BASE_URL` | Download link base. Default `https://app.hetalretail.com/sfUI?af_xp=custom&pid=job-board-xml`. |
+| `ONELINK_BASE_URL` | Download link base. Default `https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`. |
 | `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `marketing@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
 | `SITE_URL` | Optional canonical origin for feed URLs. Leave unset until `jobs.hetalretail.com` answers. |

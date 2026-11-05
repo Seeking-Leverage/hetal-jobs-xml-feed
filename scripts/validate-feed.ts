@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { XMLValidator } from "fast-xml-parser";
 
-import { getCompanyName, getFeedEmail } from "../lib/config";
+import { getCompanyName, getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { loadJobs } from "../lib/jobs";
 import type { Job } from "../lib/types";
 
@@ -325,9 +325,16 @@ async function main() {
       applyHref.includes("&c=") &&
       applyHref.includes("&af_sub1=") &&
       applyHref.includes("&af_sub2=");
-    if (pidCount !== 1 || apply.searchParams.get("pid") !== "job-board-xml") {
+    const baseUrl = getOnelinkBaseUrl().replace(/[?&]$/, "");
+    if (pidCount !== 1 || apply.searchParams.get("pid") !== "Indeed") {
       fail(
-        `${job.referencenumber} link must keep a single pid=job-board-xml from the base URL (${applyHref})`,
+        `${job.referencenumber} link must keep a single pid=Indeed from the base URL (${applyHref})`,
+      );
+    } else if (apply.searchParams.get("c") === "indeed_launch" || applyHref.includes("indeed_launch")) {
+      fail(`${job.referencenumber} link must not add c=indeed_launch (${applyHref})`);
+    } else if (!applyHref.startsWith(`${baseUrl}&`)) {
+      fail(
+        `${job.referencenumber} link must start from the OneLink base and append params (${applyHref})`,
       );
     } else if (!appendedWithAmpersand) {
       fail(`${job.referencenumber} link must append c, af_sub1, and af_sub2 with & (${applyHref})`);
@@ -356,7 +363,7 @@ async function main() {
       fail(`${job.referencenumber} 410 page is missing the no longer available message`);
       continue;
     }
-    if (/app\.hetalretail\.com|[?&]af_sub2=/i.test(html)) {
+    if (/hetalretail\.onelink\.me|[?&]af_sub2=/i.test(html)) {
       fail(`${job.referencenumber} closed page still includes the apply link`);
       continue;
     }

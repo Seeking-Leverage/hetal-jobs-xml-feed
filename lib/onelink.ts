@@ -12,8 +12,8 @@ export function buildOnelink(
   ]
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
-  // The Hetal base URL already includes ?af_xp=custom&pid=job-board-xml.
-  // Keep that pid and append the visit params with "&".
+  // The base already includes af_web_dp, af_xp, and pid=Indeed.
+  // Append only the visit params. Do not add another pid or c=indeed_launch.
   const joiner = base.includes("?") ? "&" : "?";
   return `${base}${joiner}${added}`;
 }

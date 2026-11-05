@@ -1,7 +1,7 @@
 const DEFAULT_COMPANY_NAME = "Hetal Retail";
 const DEFAULT_FEED_EMAIL = "marketing@hetalretail.com";
 const DEFAULT_ONELINK_BASE_URL =
-  "https://app.hetalretail.com/sfUI?af_xp=custom&pid=job-board-xml";
+  "https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed";
 const DEFAULT_SITE_URL = "http://127.0.0.1:43123";
 
 export class JobsDataError extends Error {
