@@ -7,23 +7,22 @@ export function SiteHeader() {
   const companyName = getCompanyName();
 
   return (
-    <header className="bg-foreground text-background">
-      <div className="mx-auto flex max-w-xl items-center justify-between gap-4 px-4 py-3.5">
-        <Link href="/" className="block">
+    <header className="bg-background">
+      <div className="mx-auto flex h-16 max-w-xl items-center justify-between gap-4 px-4 sm:h-20">
+        <Link href="https://www.hetalretail.com" className="block">
           <Image
             src="/hetal-logo.png"
             alt={companyName}
-            width={170}
-            height={28}
+            width={145}
+            height={24}
             priority
-            className="h-7 w-auto invert"
+            className="h-6 w-auto"
           />
         </Link>
-        <Link href="/" className="text-[0.95rem] font-semibold text-background">
+        <Link href="/" className="nav-link">
           Open audits
         </Link>
       </div>
-      <div className="h-1 bg-primary" aria-hidden="true" />
     </header>
   );
 }

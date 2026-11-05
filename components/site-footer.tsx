@@ -4,24 +4,23 @@ export function SiteFooter() {
   const companyName = getCompanyName();
 
   return (
-    <footer className="mx-auto w-full max-w-xl px-4 pt-2 pb-10 text-sm text-muted-foreground">
-      <div className="border-t border-border pt-6">
-        <p>{companyName} hires Hetalites for on-demand store audits.</p>
-        <p className="mt-2">
-          <a className="text-foreground underline underline-offset-2" href="mailto:support@hetalretail.com">
+    <footer className="bg-foreground text-background">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-8 px-4 py-12 sm:flex-row sm:items-end sm:justify-between">
+        <nav className="flex flex-col items-start gap-4" aria-label="Hetal">
+          <a className="footer-link" href="https://www.hetalretail.com/become-a-hetalite">
+            Become a Hetalite
+          </a>
+          <a className="footer-link" href="https://www.hetalretail.com">
+            {companyName}
+          </a>
+          <a className="footer-link" href="mailto:support@hetalretail.com">
             support@hetalretail.com
           </a>
-        </p>
-        <p className="mt-1">
-          <a className="text-foreground underline underline-offset-2" href="https://www.hetalretail.com">
-            hetalretail.com
+          <a className="footer-link" href="/feed.xml">
+            Job feed
           </a>
-        </p>
-        <p className="mt-1">
-          <a className="text-foreground underline underline-offset-2" href="/feed.xml">
-            Indeed job feed
-          </a>
-        </p>
+        </nav>
+        <p className="text-sm">© {new Date().getFullYear()} - Hetal</p>
       </div>
     </footer>
   );

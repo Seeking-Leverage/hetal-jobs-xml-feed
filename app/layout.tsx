@@ -9,18 +9,23 @@ import { getCompanyName } from "@/lib/config";
 import "./globals.css";
 
 const sans = localFont({
-  src: [
-    { path: "../public/fonts/SourceSans3-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../public/fonts/SourceSans3-Semibold.woff2", weight: "600", style: "normal" },
-  ],
+  src: [{ path: "../public/fonts/PPFragment-SansRegular.otf", weight: "400", style: "normal" }],
   variable: "--font-app-sans",
   display: "swap",
   adjustFontFallback: "Arial",
-  fallback: ["Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+  fallback: ["Arial", "sans-serif"],
+});
+
+const heading = localFont({
+  src: [{ path: "../public/fonts/PPFragment-GlareRegular.otf", weight: "400", style: "normal" }],
+  variable: "--font-app-heading",
+  display: "swap",
+  adjustFontFallback: "Arial",
+  fallback: ["Arial", "sans-serif"],
 });
 
 export const viewport: Viewport = {
-  themeColor: "#112041",
+  themeColor: "#fffcf2",
   colorScheme: "light",
   width: "device-width",
   initialScale: 1,
@@ -45,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} h-full antialiased`}>
+    <html lang="en" className={`${sans.variable} ${heading.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
         <a className="skip-link" href="#content">
           Skip to content

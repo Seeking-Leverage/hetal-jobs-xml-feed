@@ -10,7 +10,7 @@ export function JobList({ jobs }: { jobs: Job[] }) {
   if (jobs.length === 0) {
     return (
       <div className="mt-6 border border-border bg-card px-4 py-6">
-        <p className="text-lg font-semibold">No open audits right now.</p>
+        <p className="font-heading text-lg">No open audits right now.</p>
         <p className="mt-2">Check back soon. New visits show up here when they are marked open.</p>
       </div>
     );
@@ -24,10 +24,8 @@ export function JobList({ jobs }: { jobs: Job[] }) {
             href={jobPath(job.referencenumber)}
             className="block border border-border bg-card px-4 py-4 text-foreground no-underline hover:border-foreground"
           >
-            <span className="block text-xl leading-tight font-semibold">{job.title}</span>
-            <span className="mt-3 inline-block bg-primary px-2 py-1 text-lg leading-none font-semibold text-primary-foreground">
-              {job.pay}
-            </span>
+            <span className="font-heading block text-xl leading-tight">{job.title}</span>
+            <span className="font-heading mt-3 block text-lg leading-none">{job.pay}</span>
             <span className="mt-3 block">
               {job.city}, {job.state} {job.postalcode}
             </span>
@@ -48,22 +46,15 @@ export function OpenJob({ job, siteUrl }: { job: Job; siteUrl: string }) {
   return (
     <article>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-      <p className="text-[0.8rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-        Open visit
-      </p>
-      <h1 className="mt-2 text-[2rem] leading-tight font-semibold tracking-tight">{job.title}</h1>
-      <p className="mt-4 inline-block bg-primary px-3 py-2 text-[2.5rem] leading-none font-semibold tracking-tight text-primary-foreground">
-        {job.pay}
-      </p>
+      <p className="eyebrow text-muted-foreground">Open visit</p>
+      <h1 className="mt-3 text-[2.25rem] leading-[1.15]">{job.title}</h1>
+      <p className="font-heading mt-4 text-[2.5rem] leading-none">{job.pay}</p>
       <p className="mt-4 text-lg">
         {job.city}, {job.state} <span translate="no">{job.postalcode}</span>
         <span className="text-muted-foreground"> · United States</span>
       </p>
       <div className="mt-5">
-        <a
-          href={applyUrl}
-          className="inline-flex h-14 w-full items-center justify-center bg-primary px-4 text-center text-base font-semibold text-primary-foreground hover:bg-[#e6c43a]"
-        >
+        <a href={applyUrl} className="btn">
           Download the Hetal app
         </a>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -86,11 +77,9 @@ export function OpenJob({ job, siteUrl }: { job: Job; siteUrl: string }) {
 export function ClosedJob({ job, openJobs }: { job: Job; openJobs: Job[] }) {
   return (
     <article>
-      <p className="text-[0.8rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-        Closed
-      </p>
-      <h1 className="mt-2 text-[2rem] leading-tight font-semibold tracking-tight">{job.title}</h1>
-      <p className="mt-5 border border-border bg-card px-4 py-4 text-[1.35rem] leading-snug font-semibold">
+      <p className="eyebrow text-muted-foreground">Closed</p>
+      <h1 className="mt-3 text-[2.25rem] leading-[1.15]">{job.title}</h1>
+      <p className="mt-5 border border-border bg-card px-4 py-4 text-[1.35rem] leading-snug">
         This job is no longer available
       </p>
       <p className="mt-4 text-lg">
@@ -102,7 +91,7 @@ export function ClosedJob({ job, openJobs }: { job: Job; openJobs: Job[] }) {
         <span translate="no">{job.referencenumber}</span>.
       </p>
       <div className="mt-8">
-        <h2 className="text-2xl font-semibold">Open audits</h2>
+        <h2 className="text-2xl">Open audits</h2>
         <JobList jobs={openJobs} />
       </div>
     </article>

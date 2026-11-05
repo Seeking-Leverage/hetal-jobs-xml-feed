@@ -19,7 +19,8 @@
   --color-input: var(--input);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --font-sans: var(--font-app-sans), "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-app-sans), Arial, sans-serif;
+  --font-heading: var(--font-app-heading), Arial, sans-serif;
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;
@@ -60,16 +61,86 @@ html {
   color: #112041;
 }
 
+h1,
+h2,
+h3,
+.font-heading {
+  font-family: var(--font-heading), Arial, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.04rem;
+}
+
 .skip-link {
   position: absolute;
   left: 0.75rem;
   top: 0.75rem;
   z-index: 20;
   transform: translateY(-150%);
+  border-radius: 31.25rem;
   background: #ffdc5c;
-  color: #112041;
+  color: #000;
   padding: 0.5rem 0.75rem;
-  font-weight: 600;
+  letter-spacing: 0.0525rem;
+  text-transform: uppercase;
+}
+
+.btn {
+  display: inline-flex;
+  height: 3rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ffdc5c;
+  border-radius: 31.25rem;
+  background: #ffdc5c;
+  padding: 0 1.5rem;
+  color: #000;
+  font-size: 0.875rem;
+  line-height: 1;
+  letter-spacing: 0.0525rem;
+  text-align: center;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+}
+
+.btn:hover {
+  border-color: #112041;
+  background: #112041;
+  color: #fff;
+}
+
+.eyebrow {
+  font-size: 0.875rem;
+  letter-spacing: 0.06rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.nav-link {
+  color: #112041;
+  font-size: 0.875rem;
+  letter-spacing: 0.06rem;
+  line-height: 1;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: #8f0000;
+}
+
+.footer-link {
+  color: #fffcf2;
+  font-size: 0.875rem;
+  letter-spacing: 0.0525rem;
+  line-height: 1.4;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: #ffdc5c;
 }
 
 .skip-link:focus {
@@ -109,8 +180,9 @@ html {
 .job-description h2,
 .job-description h3 {
   margin: 1.25rem 0 0.4rem;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.03rem;
 }
 
 .job-description a {

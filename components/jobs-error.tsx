@@ -1,12 +1,8 @@
 export function JobsError({ message }: { message: string }) {
   return (
     <div>
-      <p className="text-[0.8rem] font-semibold tracking-[0.14em] text-destructive uppercase">
-        Jobs file
-      </p>
-      <h1 className="mt-2 text-[2rem] leading-tight font-semibold tracking-tight">
-        The job list could not be read
-      </h1>
+      <p className="eyebrow text-destructive">Jobs file</p>
+      <h1 className="mt-3 text-[2.25rem] leading-[1.15]">The job list could not be read</h1>
       <p role="alert" className="mt-4 text-lg leading-7">
         {message}
       </p>
