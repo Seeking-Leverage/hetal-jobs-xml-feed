@@ -44,20 +44,20 @@ One object per visit:
 | Field | Notes |
 | --- | --- |
 | `referencenumber` | Stable id. Indeed uses this to tell listings apart. Do not reuse it. |
-| `requisitionid` | Role id. The same role in several cities can share one requisition id. |
+| `requisitionid` | Shared id. The same visit in several cities can share one requisition id. |
 | `title` | Job title only. Do not put the city, pay, or schedule in the title. |
 | `title_id` | Slug sent as the OneLink campaign (`c`). Example: `store-auditor`. |
 | `city`, `state`, `country` | `state` is the two-letter abbreviation. `country` is `US`. |
 | `postalcode` | Text, not a number, so leading zeros stay. `"03060"` is valid. Shorter digit strings are padded to 5. |
-| `pay` | Indeed salary text: `$18 per hour` or `$20 - $25 per hour`. |
-| `jobtype` | `part-time`, `full-time`, or `contract`. The sample uses `part-time` until Hetal confirms. |
+| `pay` | Indeed salary text. The sample is `$6 - $17 per audit`. |
+| `jobtype` | `contract` for this gig. `part-time` and `full-time` remain available for a different visit. |
 | `description_html` | HTML using `p`, `h2`, `ul`, `li`, `strong`, and `em`. Use real characters, not `&amp;` or `&lt;`. |
 | `status` | `open` or `closed`. Only `open` jobs are in the feed. |
 | `date_posted` | `YYYY-MM-DD`. This is the date in the feed. Do not use a future date. |
 
 The three open sample visits are Nashua NH `03060`, Secaucus NJ `07094`, and Hackensack NJ `07601`. Cambridge MA `02139` is closed so the 410 page can be checked. It is not in the feed.
 
-Pay and the contact email are placeholders until Hetal sends the real values.
+The contact email is a placeholder until Hetal sends the real address. Pay is `$6 - $17 per audit`.
 
 ## What a job page does
 

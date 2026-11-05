@@ -7,7 +7,7 @@ import { JOB_STATUSES, JOB_TYPES, type Job, type JobStatus, type JobType } from 
 
 const ENTITY = /&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]+);/;
 const PAY_PATTERN =
-  /^\$\d+(?:\.\d{2})?(?: - \$\d+(?:\.\d{2})?)? per (?:hour|day|week|month|year)$/;
+  /^\$\d+(?:\.\d{2})?(?: - \$\d+(?:\.\d{2})?)? per (?:audit|hour|day|week|month|year)$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$/;
 const TITLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -107,7 +107,7 @@ function normalizeJob(value: unknown, index: number): Job {
   const pay = requiredString(record, "pay", index);
   if (!PAY_PATTERN.test(pay)) {
     throw new JobsDataError(
-      `jobs[${index}].pay must look like "$18 per hour" or "$20 - $25 per hour" so Indeed can read the salary.`,
+      `jobs[${index}].pay must look like "$6 - $17 per audit" so Indeed can read the salary.`,
     );
   }
 

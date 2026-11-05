@@ -3,7 +3,7 @@ import type { JobType } from "./types";
 const JOB_TYPE_LABELS: Record<JobType, string> = {
   "part-time": "Part-time",
   "full-time": "Full-time",
-  contract: "Contract",
+  contract: "Independent contractor",
 };
 
 export function formatJobType(jobtype: JobType): string {
@@ -33,7 +33,8 @@ export function formatLongDate(isoDate: string): string {
   return `${month} ${Number(match[3])}, ${match[1]}`;
 }
 
-const PAY_UNIT: Record<string, "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR"> = {
+const PAY_UNIT: Record<string, "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR" | "PIECE"> = {
+  audit: "PIECE",
   hour: "HOUR",
   day: "DAY",
   week: "WEEK",
@@ -43,7 +44,7 @@ const PAY_UNIT: Record<string, "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR"> = {
 
 export function payToBaseSalary(pay: string) {
   const match = pay.match(
-    /^\$(\d+(?:\.\d{2})?)(?: - \$(\d+(?:\.\d{2})?))? per (hour|day|week|month|year)$/,
+    /^\$(\d+(?:\.\d{2})?)(?: - \$(\d+(?:\.\d{2})?))? per (audit|hour|day|week|month|year)$/,
   );
   if (!match) return undefined;
 
