@@ -1,4 +1,5 @@
 import { getCompanyName } from "@/lib/config";
+import { mountPath } from "@/lib/urls";
 
 export function SiteFooter() {
   const companyName = getCompanyName();
@@ -16,7 +17,7 @@ export function SiteFooter() {
           <a className="footer-link" href="mailto:support@hetalretail.com">
             support@hetalretail.com
           </a>
-          <a className="footer-link" href="/feed.xml">
+          <a className="footer-link" href={`${mountPath()}/feed.xml`}>
             Job feed
           </a>
         </nav>

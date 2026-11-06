@@ -142,6 +142,8 @@ Each feed returns `Content-Type: application/xml` and lists only open jobs. Text
 | Feed | Path | Download `pid` |
 | --- | --- | --- |
 | Indeed | `/jobs/feed.xml` | `Indeed` |
+
+`https://www.hetalretail.com/feed.xml` is the Webflow site, not this app, so it returns Webflow’s 404. The footer link uses `/jobs/feed.xml`. To make the root address open the same file, add a Webflow 301 from `/feed.xml` to `/jobs/feed.xml`.
 | Adzuna | `/jobs/adzuna.xml` | `Adzuna` |
 | ZipRecruiter | `/jobs/ziprecruiter.xml` | `ZipRecruiter` |
 

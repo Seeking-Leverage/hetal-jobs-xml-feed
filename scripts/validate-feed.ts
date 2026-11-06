@@ -185,6 +185,15 @@ async function main() {
   }
   if (response.status !== 200) fail(`/feed.xml returned ${response.status}, expected 200`);
 
+  const home = await fetch(base, { signal: AbortSignal.timeout(15000) });
+  const homeHtml = await home.text();
+  const rootFeedLink = /href="\/feed\.xml"/.test(homeHtml);
+  if (home.status !== 200 || !homeHtml.includes('href="/jobs/feed.xml"') || rootFeedLink) {
+    fail("the Job feed link must point at /jobs/feed.xml, not the Webflow site root");
+  } else {
+    ok("the Job feed link points at /jobs/feed.xml");
+  }
+
   const xml = await response.text();
   if (!xml.startsWith("<?xml")) fail("feed is missing the XML declaration");
 
