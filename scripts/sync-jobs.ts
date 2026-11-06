@@ -36,9 +36,11 @@ async function main() {
   const jobs = syncSheetJobs(parsed.rows, existing, today, titles);
   fs.writeFileSync(jobsPath, `${JSON.stringify(jobs, null, 2)}\n`);
   const open = jobs.filter((job) => job.status === "open");
-  const title = open[0]?.title ?? "none";
+  const counts = new Map<string, number>();
+  for (const job of open) counts.set(job.title, (counts.get(job.title) ?? 0) + 1);
+  const summary = [...counts.entries()].map(([title, count]) => `${count} ${title}`).join(", ") || "none";
   console.log(
-    `Wrote ${jobs.length} jobs (${open.length} open ${title}, ${jobs.length - open.length} closed) for ${today}.`,
+    `Wrote ${jobs.length} jobs (${open.length} open: ${summary}; ${jobs.length - open.length} closed) for ${today}.`,
   );
 }
 

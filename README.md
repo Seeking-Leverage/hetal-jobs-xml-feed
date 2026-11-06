@@ -84,7 +84,7 @@ The same sync runs before every production build. A GitHub Action also runs it a
 2. Wednesday: Retail Merchandiser (`retail-merchandiser`)
 3. Thursday: Mystery Shopper (`mystery-shopper`)
 
-Friday, Saturday, Sunday, and Monday have no open jobs. The feed lists zero jobs, and the home page says there are no open audits. Closed pages return 410 and stay out of the feed and sitemap.
+Friday through Monday keep every ZIP open and split the three titles across them. ZIPs are sorted, then the titles rotate so each title covers about a third of the list. That mix is dated Friday and stays the same through Monday, including the same reference numbers. The rotation shifts the next Friday.
 
 A ZIP never has two open jobs. When the title changes, the new visit gets a new `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` reference and the previous one stays closed. Reference numbers are never reused. The page title, every feed, and the OneLink `af_adset` value all use that job's title. `af_sub2` is its reference number. `c` stays `xml-feed-hetal-website`.
 

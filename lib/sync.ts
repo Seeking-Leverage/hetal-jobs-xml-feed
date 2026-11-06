@@ -1,5 +1,5 @@
 import { JOB_PAY, JOB_TYPE, descriptionHtml } from "./description";
-import { nextReference, titleForDate, type JobTitle } from "./schedule";
+import { nextReference, planForDate, type JobTitle } from "./schedule";
 import { uniqueZips, type SheetRow } from "./sheet";
 import type { Job } from "./types";
 
@@ -12,9 +12,10 @@ function sortJobs(jobs: Job[]): Job[] {
 }
 
 /**
- * One open job per sheet ZIP on Tuesday, Wednesday, and Thursday.
- * Friday through Monday close every job. A ZIP that leaves the sheet stays closed.
- * A new title or a new day gets a new reference number.
+ * One open job per sheet ZIP every day.
+ * Tuesday, Wednesday, and Thursday each use one title.
+ * Friday through Monday split the three titles across the ZIPs and keep that mix through Monday.
+ * A ZIP that leaves the sheet stays closed. A new title gets a new reference number.
  */
 export function syncSheetJobs(
   rows: SheetRow[],
@@ -22,18 +23,17 @@ export function syncSheetJobs(
   today: string,
   titles: JobTitle[],
 ): Job[] {
-  const places = uniqueZips(rows);
-  const title = titleForDate(today, titles);
+  const places = uniqueZips(rows).sort((a, b) => a.postalcode.localeCompare(b.postalcode));
+  const plan = planForDate(today, titles);
   const jobs: Job[] = existing.map((job) => ({ ...job, status: "closed" }));
   const used = new Set(jobs.map((job) => job.referencenumber));
 
-  if (!title) return sortJobs(jobs);
-
-  for (const place of places) {
+  places.forEach((place, index) => {
+    const title = plan.titleAt(index);
     const prior = jobs.find(
       (job) =>
         job.postalcode === place.postalcode &&
-        job.date_posted === today &&
+        job.date_posted === plan.date &&
         job.title_id === title.title_id,
     );
     if (prior) {
@@ -48,11 +48,11 @@ export function syncSheetJobs(
       prior.jobtype = JOB_TYPE;
       prior.requisitionid = `REQ-${title.title_id.toUpperCase()}`;
       prior.description_html = descriptionHtml(place.city, place.state, place.postalcode);
-      prior.valid_through = today;
-      continue;
+      prior.valid_through = plan.validThrough;
+      return;
     }
 
-    const referencenumber = nextReference(place.postalcode, today, title.title_id, used);
+    const referencenumber = nextReference(place.postalcode, plan.date, title.title_id, used);
     used.add(referencenumber);
     jobs.push({
       referencenumber,
@@ -68,10 +68,10 @@ export function syncSheetJobs(
       jobtype: JOB_TYPE,
       description_html: descriptionHtml(place.city, place.state, place.postalcode),
       status: "open",
-      date_posted: today,
-      valid_through: today,
+      date_posted: plan.date,
+      valid_through: plan.validThrough,
     });
-  }
+  });
 
   return sortJobs(jobs);
 }

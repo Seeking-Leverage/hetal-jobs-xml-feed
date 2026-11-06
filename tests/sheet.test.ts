@@ -51,7 +51,7 @@ describe("sheet import", () => {
     assert.equal([...link.searchParams.keys()].filter((key) => key === "c").length, 1);
   });
 
-  it("rotates titles by weekday and closes Friday through Monday", () => {
+  it("rotates titles by weekday and mixes all three across every ZIP on Friday through Monday", () => {
     const rows = parseSheet(csv).rows;
     const tuesday = syncSheetJobs(rows, [], "2026-11-03", titles);
     assert.equal(tuesday.filter((job) => job.status === "open").every((job) => job.title_id === "store-auditor"), true);
@@ -64,10 +64,21 @@ describe("sheet import", () => {
       true,
     );
     const friday = syncSheetJobs(rows, wednesday, "2026-11-06", titles);
-    assert.equal(friday.filter((job) => job.status === "open").length, 0);
-    assert.equal(buildFeedXml(friday, "https://www.hetalretail.com").includes("<job>"), false);
-    const monday = syncSheetJobs(rows, friday, "2026-11-09", titles);
-    assert.equal(monday.filter((job) => job.status === "open").length, 0);
+    const openFriday = friday.filter((job) => job.status === "open");
+    assert.deepEqual(openFriday.map((job) => job.postalcode).sort(), ["03060", "07094", "78006"]);
+    assert.deepEqual(
+      new Set(openFriday.map((job) => job.title_id)),
+      new Set(["store-auditor", "retail-merchandiser", "mystery-shopper"]),
+    );
+    assert.equal(openFriday.every((job) => job.date_posted === "2026-11-06" && job.valid_through === "2026-11-09"), true);
+    assert.equal(buildFeedXml(friday, "https://www.hetalretail.com").includes("<job>"), true);
+    const fridayRefs = openFriday.map((job) => job.referencenumber).sort();
+    for (const day of ["2026-11-07", "2026-11-08", "2026-11-09"]) {
+      const later = syncSheetJobs(rows, friday, day, titles);
+      const open = later.filter((job) => job.status === "open");
+      assert.deepEqual(open.map((job) => job.referencenumber).sort(), fridayRefs);
+      assert.equal(open.every((job) => job.valid_through === "2026-11-09"), true);
+    }
   });
 
   it("reuses the same reference on a second sync and does not reuse it for a new title", () => {

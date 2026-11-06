@@ -5,7 +5,7 @@ import { XMLValidator } from "fast-xml-parser";
 
 import { getCompanyName, getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { loadJobs } from "../lib/jobs";
-import { parseTitles, titleForDate } from "../lib/schedule";
+import { parseTitles, planForDate } from "../lib/schedule";
 import { todayInNewYork } from "../lib/sheet";
 import type { Job } from "../lib/types";
 
@@ -125,26 +125,28 @@ async function main() {
     "HTL-02139-20260915-store-auditor-01",
   ];
   const today = todayInNewYork();
-  const title = titleForDate(
+  const plan = planForDate(
     today,
     parseTitles(JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "titles.json"), "utf8"))),
   );
-  const mixed =
-    new Set(open.map((job) => job.postalcode)).size !== open.length ||
-    (title
-      ? open.some(
-          (job) => job.title_id !== title.title_id || job.title !== title.title || job.date_posted !== today,
-        )
-      : open.length !== 0);
-  if (mixed) {
-    fail(`open jobs do not match ${title?.title ?? "a closed day"} on ${today}`);
-  } else if (title && open.length < 100) {
-    fail(`expected every current sheet ZIP, found ${open.length} open jobs`);
+  const titleIds = new Set(open.map((job) => job.title_id));
+  const matchesPlan =
+    new Set(open.map((job) => job.postalcode)).size === open.length &&
+    open.length >= 100 &&
+    open.every(
+      (job) =>
+        job.date_posted === plan.date &&
+        job.valid_through === plan.validThrough &&
+        (plan.title === null || job.title_id === plan.title.title_id),
+    ) &&
+    (plan.title !== null || titleIds.size === 3);
+  if (!matchesPlan) {
+    fail(`open jobs do not match the ${today} plan`);
   } else {
     ok(
-      title
-        ? `${open.length} open jobs use ${title.title} on ${today}`
-        : `no open jobs on ${today}`,
+      plan.title
+        ? `${open.length} open jobs use ${plan.title.title} on ${today}`
+        : `${open.length} open jobs mix all three titles from ${plan.date} through ${plan.validThrough}`,
     );
   }
   if (

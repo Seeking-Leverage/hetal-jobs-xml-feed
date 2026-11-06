@@ -5,7 +5,7 @@ import titlesFile from "../data/titles.json";
 import sampleJobs from "../fixtures/sample-jobs.json";
 import { openingLine } from "../lib/description";
 import { loadJobs, parseJobs } from "../lib/jobs";
-import { parseTitles, titleForDate } from "../lib/schedule";
+import { parseTitles, planForDate } from "../lib/schedule";
 import { todayInNewYork } from "../lib/sheet";
 
 describe("production jobs.json", () => {
@@ -13,25 +13,23 @@ describe("production jobs.json", () => {
     const jobs = loadJobs();
     const open = jobs.filter((job) => job.status === "open");
     const today = todayInNewYork();
-    const title = titleForDate(today, parseTitles(titlesFile));
-    if (!title) {
-      assert.equal(open.length, 0);
-    } else {
-      assert.ok(open.length >= 100, `expected the sheet ZIPs to be open, found ${open.length}`);
-      assert.equal(new Set(open.map((job) => job.postalcode)).size, open.length);
-      assert.equal(
-        open.every(
-          (job) =>
-            job.title === title.title &&
-            job.title_id === title.title_id &&
-            job.date_posted === today &&
-            job.valid_through === today &&
-            job.referencenumber.startsWith(
-              `HTL-${job.postalcode}-${today.replaceAll("-", "")}-${title.title_id}-`,
-            ),
-        ),
-        true,
-      );
+    const plan = planForDate(today, parseTitles(titlesFile));
+    assert.ok(open.length >= 100, `expected the sheet ZIPs to be open, found ${open.length}`);
+    assert.equal(new Set(open.map((job) => job.postalcode)).size, open.length);
+    assert.equal(
+      open.every(
+        (job) =>
+          job.date_posted === plan.date &&
+          job.valid_through === plan.validThrough &&
+          (plan.title === null || job.title_id === plan.title.title_id) &&
+          job.referencenumber.startsWith(
+            `HTL-${job.postalcode}-${plan.date.replaceAll("-", "")}-${job.title_id}-`,
+          ),
+      ),
+      true,
+    );
+    if (plan.title === null) {
+      assert.equal(new Set(open.map((job) => job.title_id)).size, 3);
     }
     assert.equal(open.every((job) => /^\d{5}$/.test(job.postalcode)), true);
     assert.equal(new Set(jobs.map((job) => job.referencenumber)).size, jobs.length);
