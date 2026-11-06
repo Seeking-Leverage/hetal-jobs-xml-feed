@@ -183,11 +183,14 @@ describe("title schedule", () => {
     assert.equal(wed.description_html.includes("$6 to $17 per audit, depending on size"), true);
     assert.equal(wed.pay, "$6 - $17 per audit");
     const href = buildOnelink(thu);
-    assert.equal(href.includes("c=mystery-shopper"), true);
-    assert.equal(href.includes("af_sub1=03060"), true);
-    assert.equal(href.includes(`af_sub2=${thu.referencenumber}`), true);
-    assert.equal(href.includes("pid=Indeed"), true);
-    assert.equal(href.split("pid=").length, 2);
+    const url = new URL(href);
+    assert.equal(url.searchParams.get("c"), "xml-feed-hetal-website");
+    assert.equal(url.searchParams.get("af_adset"), "mystery-shopper");
+    assert.equal(url.searchParams.get("af_sub1"), "03060");
+    assert.equal(url.searchParams.get("af_sub2"), thu.referencenumber);
+    assert.equal(url.searchParams.get("pid"), "xml-hetal");
+    assert.equal([...url.searchParams.keys()].filter((key) => key === "pid").length, 1);
+    assert.equal([...url.searchParams.keys()].filter((key) => key === "c").length, 1);
   });
 
   it("does not reuse a reference number when the title changes", () => {

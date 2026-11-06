@@ -29,8 +29,8 @@ The script checks `/feed.xml`, `/adzuna.xml`, and `/ziprecruiter.xml`. It confir
 - closed jobs and the sample fixtures are absent
 - ZIP codes are 5 digits, including leading zeros, and reference numbers are unique
 - every feed URL returns 200 and the title, pay, city, state, ZIP, and description match
-- the download button uses that feed's `pid` and appends `c`, `af_sub1`, and `af_sub2`
-- a page opened with no channel keeps the Indeed `pid`
+- the download button uses that feed's `pid`, keeps `c=xml-feed-hetal-website`, and adds `af_adset`, `af_sub1`, and `af_sub2`
+- a page opened with no channel keeps `pid=xml-hetal`
 
 Set `VALIDATE_BASE_URL` if the app is not on port 43123. Leave `SITE_URL` unset while validating locally so the feed URLs use the same host.
 
@@ -43,7 +43,7 @@ One object per visit:
 | `referencenumber` | `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}`. Example: `HTL-03060-20261109-store-auditor-01`. The date is `date_posted` without hyphens. The title slug is lowercase words separated by hyphens, the same value as `title_id`. `NN` is a two-digit sequence, starting at `01`. Indeed uses this to tell listings apart. Never reuse a reference number. |
 | `requisitionid` | Shared id. The same visit in several cities can share one requisition id. |
 | `title` | Job title only. Do not put the city, pay, or schedule in the title. |
-| `title_id` | Slug sent as the OneLink campaign (`c`). Example: `store-auditor`. |
+| `title_id` | Slug sent as the OneLink ad set (`af_adset`). Example: `store-auditor`. |
 | `city`, `state`, `country` | `state` is the two-letter abbreviation. `country` is `US`. |
 | `postalcode` | Text, not a number, so leading zeros stay. `"03060"` is valid. Shorter digit strings are padded to 5. |
 | `pay` | Indeed salary text. The sample is `$6 - $17 per audit`. |
@@ -90,19 +90,17 @@ npm run generate-schedule
 
 That writes `data/title-schedule.json` from the sheet ZIPs in `data/jobs.json` and the three titles. Every slot starts with `"approved": false`. Andy can edit a title and set `"approved": true`, then run the command again. Approved flags and title edits are kept. Unapproved slots stay out of every feed.
 
-Only the approved job for today can replace the live visit. That publish closes the previous job for the ZIP and leaves it in `data/jobs.json`. Closed pages return 410. A ZIP never has two open jobs. Reference numbers stay `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` and are never reused. The page title, every feed, and the OneLink `c` value all use that job's title. `af_sub2` is its reference number.
+Only the approved job for today can replace the live visit. That publish closes the previous job for the ZIP and leaves it in `data/jobs.json`. Closed pages return 410. A ZIP never has two open jobs. Reference numbers stay `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` and are never reused. The page title, every feed, and the OneLink `af_adset` value all use that job's title. `af_sub2` is its reference number. `c` stays `xml-feed-hetal-website`.
 
 ## What a job page does
 
-The page is server rendered. It shows the title, pay, city, state, ZIP, and the same HTML description Indeed receives. One button, **Download the Hetal app**, links to the OneLink:
+The page is server rendered. It shows the title, pay, city, state, ZIP, and the same HTML description Indeed receives. One button, **Download the Hetal app**, links to the OneLink. With no board on the request, the button starts from this base and then adds `af_adset`, `af_sub1`, and `af_sub2`:
 
-`{ONELINK_BASE_URL}&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`
+`https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`
 
-The base URL already contains `af_web_dp`, `af_xp=custom`, and a `pid`:
+`af_xp=custom`, `c=xml-feed-hetal-website`, and `af_web_dp=https://www.hetalretail.com/become-a-hetalite` stay as written. The title goes in `af_adset`, the ZIP in `af_sub1`, and the reference number in `af_sub2`. The page does not add `c={title_id}`, `c=indeed_launch`, or a second `c` or `pid`.
 
-`https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`
-
-The page replaces `pid` for the channel and appends `c`, `af_sub1`, and `af_sub2`. It does not add `c=indeed_launch` or a second `pid`. With no `channel` query, the button uses `pid=Indeed`. A feed link sets `channel` to `indeed`, `adzuna`, or `ziprecruiter`.
+A page with no `channel` or `source` keeps `pid=xml-hetal`. A feed link sets both, for example `?channel=adzuna&source=Adzuna`, and the button replaces `pid` with that board name. Known channels use Indeed, Adzuna, and ZipRecruiter. Any other safe short slug or name from the query is used as the `pid`. An unsafe value is ignored and the base `pid` stays. Set the same `ONELINK_BASE_URL` in Vercel and Webflow.
 
 The page also includes JobPosting JSON-LD for Google for Jobs. There is no apply form and no sign-in. Candidates apply in the app.
 
@@ -157,7 +155,7 @@ The feed URL host follows the request, unless `SITE_URL` is set. Send each board
 
 | Variable | Purpose |
 | --- | --- |
-| `ONELINK_BASE_URL` | Download link base. Default `https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`. |
+| `ONELINK_BASE_URL` | Download link base. Default `https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`. |
 | `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `marketing@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
 | `SITE_URL` | Optional canonical origin for feed URLs. Leave unset until `jobs.hetalretail.com` answers. |

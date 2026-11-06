@@ -66,10 +66,14 @@ describe("jobs.json", () => {
 });
 
 const ONELINK_BASE =
-  "https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed";
+  "https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite";
+
+function paramCount(url: URL, key: string): number {
+  return [...url.searchParams.keys()].filter((name) => name === key).length;
+}
 
 describe("OneLink", () => {
-  it("keeps pid=Indeed and appends only the campaign, ZIP, and reference", () => {
+  it("starts from the base URL and keeps the website campaign", () => {
     assert.ok(nashua);
     const previous = process.env.ONELINK_BASE_URL;
     delete process.env.ONELINK_BASE_URL;
@@ -77,21 +81,21 @@ describe("OneLink", () => {
       const href = buildOnelink(nashua);
       assert.equal(
         href,
-        `${ONELINK_BASE}&c=store-auditor&af_sub1=03060&af_sub2=HTL-03060-20261101-store-auditor-01`,
+        `${ONELINK_BASE}&af_adset=store-auditor&af_sub1=03060&af_sub2=HTL-03060-20261101-store-auditor-01`,
       );
       assert.equal(getOnelinkBaseUrl(), ONELINK_BASE);
-      assert.equal(href.includes("app.hetalretail.com"), false);
+      assert.equal(href.includes("indeed.hetalretail.com"), false);
       assert.equal(href.includes("indeed_launch"), false);
       const url = new URL(href);
-      assert.equal(url.searchParams.get("pid"), "Indeed");
-      assert.equal([...url.searchParams.keys()].filter((key) => key === "pid").length, 1);
-      assert.equal([...url.searchParams.keys()].filter((key) => key === "c").length, 1);
-      assert.equal(url.searchParams.get("c"), "store-auditor");
-      assert.equal(url.searchParams.get("af_web_dp"), "http://indeed.hetalretail.com/");
+      assert.equal(url.searchParams.get("pid"), "xml-hetal");
+      assert.equal(paramCount(url, "pid"), 1);
+      assert.equal(paramCount(url, "c"), 1);
+      assert.equal(url.searchParams.get("c"), "xml-feed-hetal-website");
+      assert.equal(url.searchParams.get("af_xp"), "custom");
+      assert.equal(url.searchParams.get("af_web_dp"), "https://www.hetalretail.com/become-a-hetalite");
+      assert.equal(url.searchParams.get("af_adset"), "store-auditor");
       assert.equal(url.searchParams.get("af_sub1"), "03060");
       assert.equal(url.searchParams.get("af_sub2"), "HTL-03060-20261101-store-auditor-01");
-      assert.equal(href.includes("&c="), true);
-      assert.equal(buildOnelink(nashua, "indeed"), href);
     } finally {
       if (previous === undefined) delete process.env.ONELINK_BASE_URL;
       else process.env.ONELINK_BASE_URL = previous;
@@ -105,20 +109,72 @@ describe("OneLink", () => {
     assert.equal(url.searchParams.get("af_sub2"), "HTL-07094-20261102-store-auditor-01");
   });
 
-  it("selects the feed pid and keeps a single pid", () => {
+  it("replaces pid for a board and never adds a second c or pid", () => {
     assert.ok(nashua);
-    for (const [channel, pid] of [
-      ["adzuna", "Adzuna"],
-      ["ziprecruiter", "ZipRecruiter"],
+    for (const [channel, source, pid] of [
+      ["adzuna", "Adzuna", "Adzuna"],
+      ["ziprecruiter", "ZipRecruiter", "ZipRecruiter"],
+      ["indeed", "Indeed", "Indeed"],
     ] as const) {
-      const href = buildOnelink(nashua, channel);
+      const href = buildOnelink(nashua, { channel, source });
       const url = new URL(href);
       assert.equal(url.searchParams.get("pid"), pid);
-      assert.equal([...url.searchParams.keys()].filter((key) => key === "pid").length, 1);
-      assert.equal(url.searchParams.get("c"), "store-auditor");
+      assert.equal(paramCount(url, "pid"), 1);
+      assert.equal(paramCount(url, "c"), 1);
+      assert.equal(url.searchParams.get("c"), "xml-feed-hetal-website");
+      assert.equal(url.searchParams.get("af_adset"), "store-auditor");
       assert.equal(url.searchParams.get("af_sub1"), "03060");
       assert.equal(url.searchParams.get("af_sub2"), nashua.referencenumber);
       assert.equal(href.includes("indeed_launch"), false);
+    }
+
+    const fromChannel = new URL(buildOnelink(nashua, { channel: "adzuna" }));
+    assert.equal(fromChannel.searchParams.get("pid"), "Adzuna");
+    assert.equal(paramCount(fromChannel, "c"), 1);
+
+    const otherBoard = new URL(buildOnelink(nashua, { channel: "talent", source: "Talent" }));
+    assert.equal(otherBoard.searchParams.get("pid"), "Talent");
+    assert.equal(otherBoard.searchParams.get("c"), "xml-feed-hetal-website");
+    assert.equal(paramCount(otherBoard, "pid"), 1);
+
+    const unsafe = new URL(buildOnelink(nashua, { channel: "bad pid", source: "a&b=c" }));
+    assert.equal(unsafe.searchParams.get("pid"), "xml-hetal");
+    assert.equal(paramCount(unsafe, "pid"), 1);
+    assert.equal(paramCount(unsafe, "c"), 1);
+
+    const slugOnly = new URL(buildOnelink(nashua, { channel: "monster" }));
+    assert.equal(slugOnly.searchParams.get("pid"), "monster");
+    assert.equal(slugOnly.searchParams.get("c"), "xml-feed-hetal-website");
+    assert.equal(paramCount(slugOnly, "pid"), 1);
+    assert.equal(paramCount(slugOnly, "c"), 1);
+  });
+
+  it("drops a second c or pid and keeps the encoded web destination", () => {
+    assert.ok(nashua);
+    const previous = process.env.ONELINK_BASE_URL;
+    process.env.ONELINK_BASE_URL =
+      "https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&pid=Indeed&c=store-auditor&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite&af_adset=old&af_sub1=00000&af_sub2=OLD";
+    try {
+      const href = buildOnelink(nashua, { channel: "monster" });
+      const url = new URL(href);
+      assert.equal(paramCount(url, "c"), 1);
+      assert.equal(paramCount(url, "pid"), 1);
+      assert.equal(url.searchParams.get("c"), "xml-feed-hetal-website");
+      assert.equal(url.searchParams.get("pid"), "monster");
+      assert.equal(url.searchParams.get("af_xp"), "custom");
+      assert.equal(url.searchParams.get("af_web_dp"), "https://www.hetalretail.com/become-a-hetalite");
+      assert.equal(url.searchParams.get("af_adset"), "store-auditor");
+      assert.equal(url.searchParams.get("af_sub1"), "03060");
+      assert.equal(url.searchParams.get("af_sub2"), nashua.referencenumber);
+      assert.equal(
+        href.includes("af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite"),
+        true,
+      );
+      assert.equal(href.includes("c=store-auditor"), false);
+      assert.equal(href.includes("pid=Indeed"), false);
+    } finally {
+      if (previous === undefined) delete process.env.ONELINK_BASE_URL;
+      else process.env.ONELINK_BASE_URL = previous;
     }
   });
 });

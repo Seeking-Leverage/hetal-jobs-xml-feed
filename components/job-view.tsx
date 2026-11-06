@@ -1,9 +1,8 @@
 import Link from "next/link";
 
-import type { Channel } from "@/lib/channels";
 import { formatLongDate } from "@/lib/format";
 import { buildJobPosting, serializeJsonLd } from "@/lib/jsonld";
-import { buildOnelink } from "@/lib/onelink";
+import { buildOnelink, type OnelinkAttribution } from "@/lib/onelink";
 import type { Job } from "@/lib/types";
 import { jobPath } from "@/lib/urls";
 
@@ -43,13 +42,15 @@ export function JobList({ jobs }: { jobs: Job[] }) {
 export function OpenJob({
   job,
   siteUrl,
-  channel = "indeed",
+  channel,
+  source,
 }: {
   job: Job;
   siteUrl: string;
-  channel?: Channel;
+  channel?: OnelinkAttribution["channel"];
+  source?: OnelinkAttribution["source"];
 }) {
-  const applyUrl = buildOnelink(job, channel);
+  const applyUrl = buildOnelink(job, { channel, source });
   const jsonLd = serializeJsonLd(buildJobPosting(job, siteUrl));
 
   return (

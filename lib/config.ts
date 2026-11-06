@@ -1,7 +1,7 @@
 const DEFAULT_COMPANY_NAME = "Hetal Retail";
 const DEFAULT_FEED_EMAIL = "marketing@hetalretail.com";
 const DEFAULT_ONELINK_BASE_URL =
-  "https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed";
+  "https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite";
 const DEFAULT_SITE_URL = "http://127.0.0.1:43123";
 
 /** Marketing site. JobPosting.hiringOrganization.sameAs uses this, and the header links here. */

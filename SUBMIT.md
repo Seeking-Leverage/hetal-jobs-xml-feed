@@ -12,11 +12,11 @@ Until `jobs.hetalretail.com` is attached, leave `SITE_URL` empty and give each b
 
 `FEED_CONTACT_EMAIL` is the `<email>` inside every job. The default is `marketing@hetalretail.com`. Use that address on the Indeed employer account.
 
-The download button uses this OneLink and appends only `&c={title_id}&af_sub1={postalcode}&af_sub2={referencenumber}`:
+The download button starts from this OneLink. It keeps `c=xml-feed-hetal-website`, `af_xp=custom`, and the become-a-hetalite `af_web_dp`. A click from the Indeed feed sets `pid=Indeed`. A page with no board keeps `pid=xml-hetal`. The title is `af_adset`, the ZIP is `af_sub1`, and the reference number is `af_sub2`.
 
-`https://hetalretail.onelink.me/sfUI?af_web_dp=http%3A%2F%2Findeed.hetalretail.com%2F&af_xp=custom&pid=Indeed`
+`https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`
 
-Do not add `c=indeed_launch` to that base URL, and do not add a second `pid`. ZIP codes stay 5-digit text.
+Do not add `c=indeed_launch` or `c={title_id}`, and do not add a second `pid`. ZIP codes stay 5-digit text.
 
 Each `referencenumber` is `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}`, for example `HTL-03060-20261109-store-auditor-01`. The title slug is lowercase words separated by hyphens, and `NN` is a two-digit sequence. `af_sub2` and `/jobs/{referencenumber}` use that same id. Never reuse a reference number.
 

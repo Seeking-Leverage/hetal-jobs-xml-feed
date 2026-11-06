@@ -356,33 +356,30 @@ async function main() {
       continue;
     }
     const apply = new URL(applyHref);
-    const pidCount = [...apply.searchParams.keys()].filter((key) => key === "pid").length;
+    const keys = [...apply.searchParams.keys()];
+    const pidCount = keys.filter((key) => key === "pid").length;
+    const cCount = keys.filter((key) => key === "c").length;
     const expectedParams: Array<[string, string]> = [
       ["af_xp", "custom"],
-      ["c", job.title_id],
+      ["af_web_dp", "https://www.hetalretail.com/become-a-hetalite"],
+      ["c", "xml-feed-hetal-website"],
+      ["af_adset", job.title_id],
       ["af_sub1", job.postalcode],
       ["af_sub2", job.referencenumber],
     ];
     const mismatched = expectedParams.filter(
       ([key, value]) => apply.searchParams.get(key) !== value,
     );
-    const appendedWithAmpersand =
-      applyHref.includes("&c=") &&
-      applyHref.includes("&af_sub1=") &&
-      applyHref.includes("&af_sub2=");
-    const baseUrl = getOnelinkBaseUrl().replace(/[?&]$/, "");
     if (pidCount !== 1 || apply.searchParams.get("pid") !== "Indeed") {
       fail(
-        `${job.referencenumber} link must keep a single pid=Indeed from the base URL (${applyHref})`,
+        `${job.referencenumber} link must use a single pid=Indeed from the feed (${applyHref})`,
       );
+    } else if (cCount !== 1) {
+      fail(`${job.referencenumber} link must contain c exactly once (${applyHref})`);
     } else if (apply.searchParams.get("c") === "indeed_launch" || applyHref.includes("indeed_launch")) {
       fail(`${job.referencenumber} link must not add c=indeed_launch (${applyHref})`);
-    } else if (!applyHref.startsWith(`${baseUrl}&`)) {
-      fail(
-        `${job.referencenumber} link must start from the OneLink base and append params (${applyHref})`,
-      );
-    } else if (!appendedWithAmpersand) {
-      fail(`${job.referencenumber} link must append c, af_sub1, and af_sub2 with & (${applyHref})`);
+    } else if (applyHref.includes(`c=${job.title_id}`)) {
+      fail(`${job.referencenumber} link must not put the title in c (${applyHref})`);
     } else if (mismatched.length > 0) {
       fail(
         `${job.referencenumber} link is missing ${mismatched
@@ -402,10 +399,24 @@ async function main() {
     const plainHref = [...plainHtml.matchAll(/href="([^"]+)"/g)]
       .map((match) => decodeHtml(match[1]))
       .find((value) => value.includes("af_sub2="));
-    if (plain.status !== 200 || !plainHref || new URL(plainHref).searchParams.get("pid") !== "Indeed") {
-      fail("a job page without channel must keep the Indeed download link");
+    const baseUrl = getOnelinkBaseUrl().replace(/[?&]$/, "");
+    const plainLink = plainHref ? new URL(plainHref) : undefined;
+    const plainKeys = plainLink ? [...plainLink.searchParams.keys()] : [];
+    if (
+      plain.status !== 200 ||
+      !plainHref ||
+      !plainLink ||
+      !plainHref.startsWith(`${baseUrl}&`) ||
+      plainLink.searchParams.get("pid") !== "xml-hetal" ||
+      plainKeys.filter((key) => key === "pid").length !== 1 ||
+      plainKeys.filter((key) => key === "c").length !== 1 ||
+      plainLink.searchParams.get("c") !== "xml-feed-hetal-website" ||
+      plainLink.searchParams.get("af_adset") !== open[0].title_id ||
+      plainLink.searchParams.get("af_web_dp") !== "https://www.hetalretail.com/become-a-hetalite"
+    ) {
+      fail("a job page without channel must start from the base OneLink and keep pid=xml-hetal");
     } else {
-      ok("job page without channel uses pid=Indeed");
+      ok("job page without channel starts from the base OneLink and keeps pid=xml-hetal");
     }
   }
 
@@ -543,11 +554,15 @@ async function main() {
         continue;
       }
       const apply = new URL(href);
-      const pidCount = [...apply.searchParams.keys()].filter((key) => key === "pid").length;
+      const keys = [...apply.searchParams.keys()];
+      const pidCount = keys.filter((key) => key === "pid").length;
+      const cCount = keys.filter((key) => key === "c").length;
       if (
         pidCount !== 1 ||
+        cCount !== 1 ||
         apply.searchParams.get("pid") !== options.pid ||
-        apply.searchParams.get("c") !== job.title_id ||
+        apply.searchParams.get("c") !== "xml-feed-hetal-website" ||
+        apply.searchParams.get("af_adset") !== job.title_id ||
         apply.searchParams.get("af_sub1") !== job.postalcode ||
         apply.searchParams.get("af_sub2") !== job.referencenumber
       ) {
