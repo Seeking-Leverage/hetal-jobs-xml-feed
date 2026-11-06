@@ -1,14 +1,14 @@
 # Submit the Hetal feed to Indeed
 
-Live feed URL, once `SITE_URL` is the public origin:
+Live feed URL:
 
-`https://jobs.hetalretail.com/feed.xml`
+`https://www.hetalretail.com/jobs/feed.xml`
 
-Until `jobs.hetalretail.com` is attached, leave `SITE_URL` empty and give each board the Vercel origin plus its feed path. Every feed lists only the jobs with `status` `open` in `data/jobs.json`.
+Every feed lists only the jobs with `status` `open` in `data/jobs.json`.
 
-- Indeed: `{SITE_URL}/feed.xml`
-- Adzuna: `{SITE_URL}/adzuna.xml`
-- ZipRecruiter: `{SITE_URL}/ziprecruiter.xml`
+- Indeed: `https://www.hetalretail.com/jobs/feed.xml`
+- Adzuna: `https://www.hetalretail.com/jobs/adzuna.xml`
+- ZipRecruiter: `https://www.hetalretail.com/jobs/ziprecruiter.xml`
 
 `FEED_CONTACT_EMAIL` is the `<email>` inside every job. The default is `marketing@hetalretail.com`. Use that address on the Indeed employer account.
 
@@ -22,14 +22,14 @@ Each `referencenumber` is `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}`, for example `H
 
 ## Checklist
 
-1. Deploy with `SITE_URL` set to the origin Indeed can fetch, and `FEED_CONTACT_EMAIL` set to `marketing@hetalretail.com`.
-2. Open `/feed.xml` on that origin. The response `Content-Type` is `application/xml`, and the body lists the open visits only.
+1. Deploy with `SITE_URL` set to `https://www.hetalretail.com`, and `FEED_CONTACT_EMAIL` set to `marketing@hetalretail.com`.
+2. Open `/jobs/feed.xml` on that origin. The response `Content-Type` is `application/xml`, and the body lists the open visits only.
 3. Run `VALIDATE_BASE_URL=https://that-origin npm run validate-feed`. It must pass before you send the URL.
 4. Open the Indeed employer contact form: [https://www.indeed.com/hire/contact-us](https://www.indeed.com/hire/contact-us).
 5. Send this:
    - Company: Hetal Retail
    - Website: the `SITE_URL` origin
-   - XML feed URL: `{SITE_URL}/feed.xml` for Indeed, `{SITE_URL}/adzuna.xml` for Adzuna, or `{SITE_URL}/ziprecruiter.xml` for ZipRecruiter
+   - XML feed URL: `https://www.hetalretail.com/jobs/feed.xml` for Indeed, `https://www.hetalretail.com/jobs/adzuna.xml` for Adzuna, or `https://www.hetalretail.com/jobs/ziprecruiter.xml` for ZipRecruiter
    - Contact email: `marketing@hetalretail.com`
    - Ask Indeed to crawl the Job Sync XML feed and add the open jobs to the employer account.
 6. Keep at least 3 open jobs in the feed. Indeed does not process a smaller feed.

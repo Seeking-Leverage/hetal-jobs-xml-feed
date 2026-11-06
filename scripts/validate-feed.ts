@@ -5,6 +5,8 @@ import { XMLValidator } from "fast-xml-parser";
 
 import { getCompanyName, getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { loadJobs } from "../lib/jobs";
+import { parseTitles, titleForDate } from "../lib/schedule";
+import { todayInNewYork } from "../lib/sheet";
 import type { Job } from "../lib/types";
 
 const JOB_TAGS = [
@@ -97,10 +99,10 @@ async function main() {
   loadEnvFile(".env");
   loadEnvFile(".env.local");
 
-  const base = (process.env.VALIDATE_BASE_URL ?? "http://127.0.0.1:43123").replace(
-    /\/$/,
-    "",
-  );
+  const origin = (process.env.VALIDATE_BASE_URL ?? "http://127.0.0.1:43123")
+    .replace(/\/$/, "")
+    .replace(/\/jobs$/, "");
+  const base = `${origin}/jobs`;
 
   let jobs: Job[];
   try {
@@ -116,31 +118,34 @@ async function main() {
   const closed = jobs.filter((job) => job.status === "closed");
   ok(`${open.length} open and ${closed.length} closed in data/jobs.json`);
 
-  const week = "2026-11-02";
   const fixtureRefs = [
     "HTL-03060-20261101-store-auditor-01",
     "HTL-07094-20261102-store-auditor-01",
     "HTL-07601-20261103-store-auditor-01",
     "HTL-02139-20260915-store-auditor-01",
   ];
-  const nashua = open.find((job) => job.postalcode === "03060");
-  const sheetOpen = open.filter((job) => job.postalcode !== "03060");
-  const previousNashua = jobs.find(
-    (job) => job.referencenumber === "HTL-03060-20261102-store-auditor-01",
+  const today = todayInNewYork();
+  const title = titleForDate(
+    today,
+    parseTitles(JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "titles.json"), "utf8"))),
   );
-  if (
-    open.length !== 60 ||
-    sheetOpen.length !== 59 ||
-    sheetOpen.some((job) => job.date_posted !== week) ||
-    nashua?.referencenumber !== "HTL-03060-20261105-mystery-shopper-01" ||
-    nashua.title !== "Mystery Shopper" ||
-    previousNashua?.status !== "closed"
-  ) {
-    fail(
-      `expected 59 open jobs dated ${week} plus Nashua Mystery Shopper, found ${open.length} open`,
-    );
+  const mixed =
+    new Set(open.map((job) => job.postalcode)).size !== open.length ||
+    (title
+      ? open.some(
+          (job) => job.title_id !== title.title_id || job.title !== title.title || job.date_posted !== today,
+        )
+      : open.length !== 0);
+  if (mixed) {
+    fail(`open jobs do not match ${title?.title ?? "a closed day"} on ${today}`);
+  } else if (title && open.length < 100) {
+    fail(`expected every current sheet ZIP, found ${open.length} open jobs`);
   } else {
-    ok("59 sheet jobs for 2026-11-02 and Nashua's approved Thursday title");
+    ok(
+      title
+        ? `${open.length} open jobs use ${title.title} on ${today}`
+        : `no open jobs on ${today}`,
+    );
   }
   if (
     new Set(open.map((job) => job.postalcode)).size !== open.length ||
@@ -304,10 +309,13 @@ async function main() {
       fail(`${job.referencenumber} url is not absolute: ${row.url}`);
       continue;
     }
-    if (feedUrl.origin !== new URL(base).origin) {
+    if (feedUrl.origin !== origin) {
       fail(
-        `${job.referencenumber} url origin ${feedUrl.origin} does not match ${base}. Unset SITE_URL when validating locally.`,
+        `${job.referencenumber} url origin ${feedUrl.origin} does not match ${origin}. Unset SITE_URL when validating locally.`,
       );
+    }
+    if (feedUrl.pathname !== `/jobs/${job.referencenumber}` || feedUrl.pathname.includes("/jobs/jobs/")) {
+      fail(`${job.referencenumber} url path is ${feedUrl.pathname}, expected /jobs/${job.referencenumber}`);
     }
     if (feedUrl.searchParams.get("source") !== "Indeed") {
       fail(`${job.referencenumber} url is missing source=Indeed`);
@@ -391,7 +399,7 @@ async function main() {
   ok("Indeed pages match title, pay, location, description, and pid=Indeed");
 
   if (open[0]) {
-    const plain = await fetch(`${base}/jobs/${encodeURIComponent(open[0].referencenumber)}`, {
+    const plain = await fetch(`${base}/${encodeURIComponent(open[0].referencenumber)}`, {
       redirect: "manual",
       signal: AbortSignal.timeout(15000),
     });
@@ -421,7 +429,7 @@ async function main() {
   }
 
   for (const job of closed) {
-    const page = await fetch(`${base}/jobs/${encodeURIComponent(job.referencenumber)}`, {
+    const page = await fetch(`${base}/${encodeURIComponent(job.referencenumber)}`, {
       redirect: "manual",
       signal: AbortSignal.timeout(15000),
     });
@@ -587,7 +595,7 @@ async function main() {
     tags: ["title", "description", "url", "city", "state", "country", "postalcode", "salary", "company"],
   });
 
-  const missing = await fetch(`${base}/jobs/HTL-DOES-NOT-EXIST`, {
+  const missing = await fetch(`${base}/HTL-DOES-NOT-EXIST`, {
     redirect: "manual",
     signal: AbortSignal.timeout(15000),
   });

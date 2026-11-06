@@ -43,7 +43,10 @@ function canonicalHref(html: string): string | undefined {
 
 async function main() {
   loadLocalEnv();
-  const base = (process.env.VALIDATE_BASE_URL ?? "http://127.0.0.1:43123").replace(/\/$/, "");
+  const origin = (process.env.VALIDATE_BASE_URL ?? "http://127.0.0.1:43123")
+    .replace(/\/$/, "")
+    .replace(/\/jobs$/, "");
+  const base = `${origin}/jobs`;
   const jobs = loadJobs();
   const open = jobs.filter((job) => job.status === "open");
   const closed = jobs.filter((job) => job.status === "closed");
@@ -104,7 +107,7 @@ async function main() {
   }
 
   for (const job of closed) {
-    const response = await fetch(`${base}/jobs/${encodeURIComponent(job.referencenumber)}`, {
+    const response = await fetch(`${base}/${encodeURIComponent(job.referencenumber)}`, {
       redirect: "manual",
       signal: AbortSignal.timeout(15000),
     });

@@ -8,8 +8,10 @@
     "start": "next start --hostname 0.0.0.0 --port 43123",
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
-    "import-jobs": "tsx scripts/import-jobs.ts",
-    "generate-schedule": "tsx scripts/generate-schedule.ts",
+    "prebuild": "tsx scripts/sync-jobs.ts",
+    "sync-jobs": "tsx scripts/sync-jobs.ts",
+    "import-jobs": "tsx scripts/sync-jobs.ts",
+    "generate-schedule": "tsx scripts/sync-jobs.ts",
     "validate-feed": "tsx scripts/validate-feed.ts",
     "validate-structured-data": "tsx scripts/validate-structured-data.ts",
     "notify-google": "tsx scripts/notify-google.ts"

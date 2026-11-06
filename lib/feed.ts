@@ -1,6 +1,6 @@
 import { getCompanyName, getFeedEmail } from "./config";
 import type { Job } from "./types";
-import { jobFeedUrl } from "./urls";
+import { jobFeedUrl, publicSiteOrigin } from "./urls";
 
 function cdata(value: string): string {
   return `<![CDATA[${value.replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
@@ -48,7 +48,7 @@ export function buildFeedXml(jobs: Job[], siteUrl: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <source>
   <publisher>${cdata(company)}</publisher>
-  <publisherurl>${cdata(siteUrl)}</publisherurl>
+  <publisherurl>${cdata(publicSiteOrigin(siteUrl))}</publisherurl>
 ${jobNodes}
 </source>
 `;
@@ -119,7 +119,7 @@ export function buildZipRecruiterFeedXml(jobs: Job[], siteUrl: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <source>
   <publisher>${cdata(company)}</publisher>
-  <publisherurl>${cdata(siteUrl)}</publisherurl>
+  <publisherurl>${cdata(publicSiteOrigin(siteUrl))}</publisherurl>
 ${jobNodes}
 </source>
 `;

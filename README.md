@@ -1,6 +1,6 @@
 # Hetal Retail job feed
 
-Public job pages and job feeds for Hetal Retail store audits. Indeed reads `/feed.xml`, Adzuna reads `/adzuna.xml`, and ZipRecruiter reads `/ziprecruiter.xml`. All three read `data/jobs.json`. A Hetalite who clicks a listing lands on `/jobs/{referencenumber}` and can download the Hetal app.
+Public job pages and job feeds for Hetal Retail store audits. The app is mounted at `/jobs` on `https://www.hetalretail.com`. Indeed reads `/jobs/feed.xml`, Adzuna reads `/jobs/adzuna.xml`, and ZipRecruiter reads `/jobs/ziprecruiter.xml`. All three read `data/jobs.json`. A Hetalite who clicks a listing lands on `https://www.hetalretail.com/jobs/{referencenumber}` and can download the Hetal app.
 
 Closed jobs stay out of every feed, and their pages return HTTP 410.
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open [http://127.0.0.1:43123](http://127.0.0.1:43123). The feed is [http://127.0.0.1:43123/feed.xml](http://127.0.0.1:43123/feed.xml).
+Open [http://127.0.0.1:43123/jobs](http://127.0.0.1:43123/jobs). The feed is [http://127.0.0.1:43123/jobs/feed.xml](http://127.0.0.1:43123/jobs/feed.xml).
 
 Copy `.env.example` to `.env.local` to override the download link, contact email, or company name. The app runs without that file and uses the defaults below.
 
@@ -23,7 +23,7 @@ With the dev server running:
 npm run validate-feed
 ```
 
-The script checks `/feed.xml`, `/adzuna.xml`, and `/ziprecruiter.xml`. It confirms that:
+The script checks `/jobs/feed.xml`, `/jobs/adzuna.xml`, and `/jobs/ziprecruiter.xml`. It confirms that:
 
 - each feed is well formed XML and lists every open job
 - closed jobs and the sample fixtures are absent
@@ -61,36 +61,32 @@ The live visits come from the Hetal Google Sheet (City, Zip, Metro, Date Added):
 [https://docs.google.com/spreadsheets/d/1jRI2rzi_JONSOLvSaBebV54QUV8wJe57tfV74zPcDwM/edit](https://docs.google.com/spreadsheets/d/1jRI2rzi_JONSOLvSaBebV54QUV8wJe57tfV74zPcDwM/edit)
 
 ```bash
-npm run import-jobs
+npm run sync-jobs
 ```
 
 That downloads the published CSV. No Google sign-in is required. To use a local export instead:
 
 ```bash
-npm run import-jobs -- path/to/jobs.csv
+npm run sync-jobs -- path/to/jobs.csv
 ```
 
-`IMPORT_WEEK` defaults to `2026-11-02`. The sheet has 60 rows on that date, one ZIP each, so the import writes 60 open jobs. Metro is stored for reporting and is left out of the pages and feeds. A visit stays open for 7 days from Date Added unless that reference number was already marked closed. Running the import again keeps those reference numbers and does not reuse them.
+Every unique valid 5-digit ZIP on the sheet becomes one job, including older Date Added weeks. Metro is stored for reporting and is left out of the pages and feeds. A ZIP that leaves the sheet is closed and dropped from the feed and sitemap. Running the sync again keeps an existing reference number for the same ZIP, day, and title.
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 
-## Weekly title test
+The same sync runs before every production build. A GitHub Action also runs it at least every six hours, commits `data/jobs.json` when it changes, and pushes so Webflow Cloud deploys the update. A ZIP added to the sheet shows up after that run. No approval step is required.
 
-Each ZIP tries three titles in one week. `data/titles.json` is the catalog, in order:
+## Weekday titles
+
+`data/titles.json` is the catalog. America/New_York decides the day:
 
 1. Tuesday: On-Demand Store Auditor (`store-auditor`)
 2. Wednesday: Retail Merchandiser (`retail-merchandiser`)
 3. Thursday: Mystery Shopper (`mystery-shopper`)
 
-Friday, Saturday, and Sunday keep Thursday's title and the same reference number. Monday closes the previous week's job. The new week's Tuesday job is created only when that slot is approved.
+Friday, Saturday, Sunday, and Monday have no open jobs. The feed lists zero jobs, and the home page says there are no open audits. Closed pages return 410 and stay out of the feed and sitemap.
 
-```bash
-npm run generate-schedule
-```
-
-That writes `data/title-schedule.json` from the sheet ZIPs in `data/jobs.json` and the three titles. Every slot starts with `"approved": false`. Andy can edit a title and set `"approved": true`, then run the command again. Approved flags and title edits are kept. Unapproved slots stay out of every feed.
-
-Only the approved job for today can replace the live visit. That publish closes the previous job for the ZIP and leaves it in `data/jobs.json`. Closed pages return 410. A ZIP never has two open jobs. Reference numbers stay `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` and are never reused. The page title, every feed, and the OneLink `af_adset` value all use that job's title. `af_sub2` is its reference number. `c` stays `xml-feed-hetal-website`.
+A ZIP never has two open jobs. When the title changes, the new visit gets a new `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` reference and the previous one stays closed. Reference numbers are never reused. The page title, every feed, and the OneLink `af_adset` value all use that job's title. `af_sub2` is its reference number. `c` stays `xml-feed-hetal-website`.
 
 ## What a job page does
 
@@ -104,7 +100,7 @@ A page with no `channel` or `source` keeps `pid=xml-hetal`. A feed link sets bot
 
 The page also includes JobPosting JSON-LD for Google for Jobs. There is no apply form and no sign-in. Candidates apply in the app.
 
-The canonical URL is `/jobs/{referencenumber}` with no `channel` or `source` query. A feed link may add those parameters, and the page still points Google at the permanent URL. `/sitemap.xml` lists the home page and the open jobs only.
+The public canonical URL is `https://www.hetalretail.com/jobs/{referencenumber}` with no `channel` or `source` query. A feed link may add those parameters, and the page still points Google at the permanent URL. The old `/jobs/jobs/{referencenumber}` path redirects to that URL. `/jobs/sitemap.xml` lists the home page and the open jobs only, always on `https://www.hetalretail.com`.
 
 A closed job shows "This job is no longer available", returns 410, and does not include JobPosting markup. An unknown reference number returns 404.
 
@@ -120,7 +116,7 @@ With the dev server running, that checks the JSON-LD, the canonical URL, the vis
 
 Manual checks, after the public host is live:
 
-1. Open [Google's Rich Results Test](https://search.google.com/test/rich-results) and enter one canonical job URL, such as `https://jobs.hetalretail.com/jobs/HTL-03060-20261102-store-auditor-01`. Confirm the detected type is JobPosting and the required properties match the page.
+1. Open [Google's Rich Results Test](https://search.google.com/test/rich-results) and enter one canonical job URL, such as `https://www.hetalretail.com/jobs/HTL-03060-20261105-mystery-shopper-01`. Confirm the detected type is JobPosting and the required properties match the page.
 2. In Search Console, use URL Inspection on that same URL. The inspected URL must be the permanent `/jobs/{referencenumber}` address, not a feed URL with `channel`.
 3. Inspect a closed job URL and confirm Google sees HTTP 410 and no JobPosting.
 
@@ -145,11 +141,11 @@ Each feed returns `Content-Type: application/xml` and lists only open jobs. Text
 
 | Feed | Path | Download `pid` |
 | --- | --- | --- |
-| Indeed | `/feed.xml` | `Indeed` |
-| Adzuna | `/adzuna.xml` | `Adzuna` |
-| ZipRecruiter | `/ziprecruiter.xml` | `ZipRecruiter` |
+| Indeed | `/jobs/feed.xml` | `Indeed` |
+| Adzuna | `/jobs/adzuna.xml` | `Adzuna` |
+| ZipRecruiter | `/jobs/ziprecruiter.xml` | `ZipRecruiter` |
 
-The feed URL host follows the request, unless `SITE_URL` is set. Send each board its own URL, for example `https://jobs.hetalretail.com/feed.xml`.
+Production feeds and the sitemap use `https://www.hetalretail.com`. They do not use localhost or a `vercel.app` host. Job links are `https://www.hetalretail.com/jobs/{referencenumber}`.
 
 ## Environment
 
@@ -158,25 +154,21 @@ The feed URL host follows the request, unless `SITE_URL` is set. Send each board
 | `ONELINK_BASE_URL` | Download link base. Default `https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`. |
 | `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `marketing@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
-| `SITE_URL` | Optional canonical origin for feed URLs. Leave unset until `jobs.hetalretail.com` answers. |
-| `JOBS_CSV_URL` | Optional sheet CSV. The default is the published Hetal sheet. |
+| `SITE_URL` | Public origin for feeds and the sitemap. Production defaults to `https://www.hetalretail.com`. Leave it unset locally. |
+| `NEXT_PUBLIC_BASE_PATH` | Mount path. Default `/jobs`, matching the Webflow Cloud mount. |
+| `JOBS_CSV_URL` | Published sheet CSV. Default includes `gid=0` for the Hetal ZIP sheet. |
 | `JOBS_CSV_PATH` | Optional local CSV export. Used instead of the URL when set. |
-| `IMPORT_WEEK` | Week to import, `YYYY-MM-DD` or `M/D/YY`. Default `2026-11-02`. |
 | `GOOGLE_INDEXING_CLIENT_EMAIL` | Service account that owns the Search Console property. Used only by `npm run notify-google`. |
 | `GOOGLE_INDEXING_PRIVATE_KEY` | PEM private key for that service account. Store it in `.env.local`. |
 
 ## Deploy
 
-This is a Next.js app meant for Vercel.
+Webflow Cloud hosts this app at `https://www.hetalretail.com/jobs`. The mount path is `/jobs`. Webflow sets the Next.js base path from that mount during the build, and `next.config.ts` uses the same `/jobs` path so local URLs match. Each deploy runs `npm run sync-jobs` before the build.
 
-1. Import the project in Vercel and set the three environment variables. Leave `SITE_URL` empty until the custom domain works.
-2. Ask the client's DNS admin to CNAME `jobs.hetalretail.com` to the Vercel target (usually `cname.vercel-dns.com`).
-3. Add `jobs.hetalretail.com` as a domain on the Vercel project.
-4. Set `SITE_URL=https://jobs.hetalretail.com` and redeploy.
-5. Send each board its feed: `/feed.xml` to Indeed, `/adzuna.xml` to Adzuna, and `/ziprecruiter.xml` to ZipRecruiter.
+Set `SITE_URL=https://www.hetalretail.com` in the Webflow environment if you want it explicit. When it is unset, production still publishes that origin.
 
-Until the CNAME exists, use the Vercel preview URL. Fetch `/feed.xml` on that host and confirm the job URLs use the same host.
+The scheduled refresh is `.github/workflows/sync-jobs.yml`. It fetches the sheet, updates `data/jobs.json`, and pushes to `main` so Webflow deploys. You can also run it by hand from the Actions tab.
 
 ## Not in this version
 
-No Google user sign-in, no unattended publisher, no apply form, no accounts, and no performance reporting. `npm run notify-google` uses a service account when you choose to run it. A title goes live only after Andy approves it in `data/title-schedule.json` and runs `npm run generate-schedule`.
+No Google user sign-in, no apply form, no accounts, and no performance reporting. `npm run notify-google` uses a service account when you choose to run it. Titles change by weekday without an approval file.

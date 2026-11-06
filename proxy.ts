@@ -4,21 +4,25 @@ import { JobsDataError } from "@/lib/config";
 import { decodeReferencenumber, loadJobs } from "@/lib/jobs";
 
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const url = request.nextUrl.clone();
+  const { pathname } = url;
 
-  if (pathname.startsWith("/jobs/closed/")) {
-    if (request.nextUrl.searchParams.get("__closed") === "1") {
-      return NextResponse.next();
-    }
-    const raw = pathname.slice("/jobs/closed/".length).split("/")[0] ?? "";
-    const ref = decodeReferencenumber(raw);
-    const url = request.nextUrl.clone();
-    url.pathname = `/jobs/${encodeURIComponent(ref)}`;
+  const legacy = pathname.match(/^(?:\/jobs)?\/jobs\/(HTL-[^/]+)$/);
+  if (legacy) {
+    url.pathname = `/${legacy[1]}`;
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
+
+  const closed = pathname.match(/^\/closed\/([^/]+)$/);
+  if (closed) {
+    if (url.searchParams.get("__closed") === "1") return NextResponse.next();
+    url.pathname = `/${decodeReferencenumber(closed[1] ?? "")}`;
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  const match = pathname.match(/^\/jobs\/([^/]+)$/);
+  const match = pathname.match(/^\/(HTL-[^/]+)$/);
   if (!match) return NextResponse.next();
 
   const ref = decodeReferencenumber(match[1] ?? "");
@@ -26,8 +30,7 @@ export function proxy(request: NextRequest) {
     const job = loadJobs().find((item) => item.referencenumber === ref);
     if (job?.status !== "closed") return NextResponse.next();
 
-    const url = request.nextUrl.clone();
-    url.pathname = `/jobs/closed/${encodeURIComponent(job.referencenumber)}`;
+    url.pathname = `/closed/${encodeURIComponent(job.referencenumber)}`;
     url.searchParams.set("__closed", "1");
     return NextResponse.rewrite(url, { status: 410 });
   } catch (error) {
@@ -37,5 +40,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/jobs/:path*"],
+  matcher: ["/HTL-:referencenumber", "/jobs/:referencenumber", "/jobs/jobs/:referencenumber", "/closed/:referencenumber"],
 };

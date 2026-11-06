@@ -49,7 +49,7 @@ async function main() {
   const siteUrl = process.env.SITE_URL?.trim().replace(/\/$/, "");
   if (!siteUrl || !siteUrl.startsWith("https://")) {
     throw new Error(
-      "Set SITE_URL to the public https origin, such as https://jobs.hetalretail.com, before notifying Google.",
+      "Set SITE_URL to the public https origin, such as https://www.hetalretail.com, before notifying Google.",
     );
   }
 

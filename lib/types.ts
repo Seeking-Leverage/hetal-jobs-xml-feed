@@ -20,6 +20,6 @@ export type Job = {
   description_html: string;
   status: JobStatus;
   date_posted: string;
-  /** Last day the visit stays open, inclusive. Seven days from date_posted. */
+  /** Last day the visit stays open, inclusive. Title days expire the same day. */
   valid_through?: string;
 };

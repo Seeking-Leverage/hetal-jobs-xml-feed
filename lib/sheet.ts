@@ -1,20 +1,6 @@
 import { JobsDataError } from "./config";
-import {
-  JOB_PAY,
-  JOB_REQUISITION_ID,
-  JOB_TITLE,
-  JOB_TITLE_ID,
-  JOB_TYPE,
-  OPEN_DAYS,
-  descriptionHtml,
-} from "./description";
-import type { Job } from "./types";
-
 export const DEFAULT_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/1jRI2rzi_JONSOLvSaBebV54QUV8wJe57tfV74zPcDwM/export?format=csv";
-
-/** This version imports the week dated 11/2/26. */
-export const DEFAULT_IMPORT_WEEK = "2026-11-02";
+  "https://docs.google.com/spreadsheets/d/1jRI2rzi_JONSOLvSaBebV54QUV8wJe57tfV74zPcDwM/export?format=csv&gid=0";
 
 export type SheetRow = {
   city: string;
@@ -80,13 +66,6 @@ export function parseSheetDate(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
-export function addDays(isoDate: string, days: number): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 export function todayInNewYork(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(now);
 }
@@ -111,7 +90,24 @@ export function padZip(value: string): string {
   return digits.padStart(5, "0");
 }
 
-export function rowsFromCsv(text: string): SheetRow[] {
+function rowFromCells(
+  cells: string[],
+  cityIndex: number,
+  zipIndex: number,
+  metroIndex: number,
+  dateIndex: number,
+): SheetRow {
+  const place = splitCity(cells[cityIndex] ?? "");
+  return {
+    city: place.city,
+    state: place.state,
+    postalcode: padZip(cells[zipIndex] ?? ""),
+    metro: (cells[metroIndex] ?? "").trim(),
+    date_posted: parseSheetDate(cells[dateIndex] ?? ""),
+  };
+}
+
+export function parseSheet(text: string): { rows: SheetRow[]; skipped: string[] } {
   const table = parseCsv(text.replace(/^\uFEFF/, ""));
   if (table.length < 2) {
     throw new JobsDataError("The job CSV needs a header and at least one row.");
@@ -128,98 +124,33 @@ export function rowsFromCsv(text: string): SheetRow[] {
   const zipIndex = column("zip");
   const metroIndex = column("metro");
   const dateIndex = column("date added");
-
-  return table.slice(1).map((cells) => {
-    const place = splitCity(cells[cityIndex] ?? "");
-    return {
-      city: place.city,
-      state: place.state,
-      postalcode: padZip(cells[zipIndex] ?? ""),
-      metro: (cells[metroIndex] ?? "").trim(),
-      date_posted: parseSheetDate(cells[dateIndex] ?? ""),
-    };
+  const rows: SheetRow[] = [];
+  const skipped: string[] = [];
+  table.slice(1).forEach((cells, index) => {
+    try {
+      rows.push(rowFromCells(cells, cityIndex, zipIndex, metroIndex, dateIndex));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid row.";
+      skipped.push(`row ${index + 2}: ${message}`);
+    }
   });
+  return { rows, skipped };
 }
 
-function sequence(number: number): string {
-  return String(number).padStart(2, "0");
-}
-
-function referencePrefix(row: SheetRow): string {
-  return `HTL-${row.postalcode}-${row.date_posted.replaceAll("-", "")}-${JOB_TITLE_ID}-`;
-}
-
-export function jobsFromSheetRows(
-  rows: SheetRow[],
-  options: { week: string; today: string; existing?: Job[] },
-): Job[] {
-  const weekRows = rows.filter((row) => row.date_posted === options.week);
-  if (weekRows.length === 0) {
-    throw new JobsDataError(`No CSV rows are dated ${options.week}.`);
+export function rowsFromCsv(text: string): SheetRow[] {
+  const parsed = parseSheet(text);
+  if (parsed.skipped.length > 0) {
+    throw new JobsDataError(parsed.skipped[0] ?? "The job CSV has an invalid row.");
   }
+  return parsed.rows;
+}
 
-  const existing = (options.existing ?? []).filter((job) => job.metro);
-  const generated: Job[] = [];
-  const validThrough = addDays(options.week, OPEN_DAYS - 1);
-  const inWindow = options.today >= options.week && options.today <= validThrough;
-
-  for (const row of weekRows) {
-    const prefix = referencePrefix(row);
-    let number = 1;
-    let referencenumber = "";
-    while (number <= 99) {
-      const candidate = `${prefix}${sequence(number)}`;
-      const prior = existing.find((job) => job.referencenumber === candidate);
-      const already = generated.some((job) => job.referencenumber === candidate);
-      const sameVisit =
-        prior &&
-        prior.postalcode === row.postalcode &&
-        prior.date_posted === row.date_posted &&
-        prior.title_id === JOB_TITLE_ID &&
-        !already;
-      if (!prior && !already) {
-        referencenumber = candidate;
-        break;
-      }
-      if (sameVisit) {
-        referencenumber = candidate;
-        break;
-      }
-      number += 1;
-    }
-    if (!referencenumber) {
-      throw new JobsDataError(`No unused reference number remains for ${prefix}.`);
-    }
-
-    const prior = existing.find((job) => job.referencenumber === referencenumber);
-    const status = !inWindow || prior?.status === "closed" ? "closed" : "open";
-    generated.push({
-      referencenumber,
-      requisitionid: JOB_REQUISITION_ID,
-      title: JOB_TITLE,
-      title_id: JOB_TITLE_ID,
-      city: row.city,
-      state: row.state,
-      country: "US",
-      postalcode: row.postalcode,
-      metro: row.metro,
-      pay: JOB_PAY,
-      jobtype: JOB_TYPE,
-      description_html: descriptionHtml(row.city, row.state, row.postalcode),
-      status,
-      date_posted: row.date_posted,
-      valid_through: validThrough,
-    });
+/** One row per ZIP. The latest Date Added wins. */
+export function uniqueZips(rows: SheetRow[]): SheetRow[] {
+  const byZip = new Map<string, SheetRow>();
+  for (const row of rows) {
+    const current = byZip.get(row.postalcode);
+    if (!current || row.date_posted >= current.date_posted) byZip.set(row.postalcode, row);
   }
-
-  const generatedRefs = new Set(generated.map((job) => job.referencenumber));
-  const retained = existing
-    .filter((job) => !generatedRefs.has(job.referencenumber))
-    .map((job) => ({ ...job, status: "closed" as const }));
-
-  return [...generated, ...retained].sort((a, b) =>
-    `${a.state}${a.city}${a.postalcode}${a.referencenumber}`.localeCompare(
-      `${b.state}${b.city}${b.postalcode}${b.referencenumber}`,
-    ),
-  );
+  return [...byZip.values()];
 }

@@ -4,9 +4,6 @@ export const JOB_REQUISITION_ID = "REQ-STORE-AUDITOR";
 export const JOB_PAY = "$6 - $17 per audit";
 export const JOB_TYPE = "contract" as const;
 
-/** A visit stays open on the date added and the next six days. */
-export const OPEN_DAYS = 7;
-
 export function openingLine(city: string, state: string, postalcode: string): string {
   return `Flexible in-store audit work near ${city}, ${state} ${postalcode}. Paid per audit, fast onboarding, go when it suits you.`;
 }

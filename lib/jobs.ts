@@ -87,7 +87,7 @@ function normalizeJob(value: unknown, index: number): Job {
   const title_id = requiredString(record, "title_id", index);
   if (!TITLE_ID_PATTERN.test(title_id)) {
     throw new JobsDataError(
-      `jobs[${index}].title_id must be a slug such as "store-auditor". It is sent as the OneLink campaign.`,
+      `jobs[${index}].title_id must be a slug such as "store-auditor". It is sent as the OneLink af_adset.`,
     );
   }
 

@@ -1,46 +1,50 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import titlesFile from "../data/titles.json";
 import sampleJobs from "../fixtures/sample-jobs.json";
 import { openingLine } from "../lib/description";
 import { loadJobs, parseJobs } from "../lib/jobs";
+import { parseTitles, titleForDate } from "../lib/schedule";
+import { todayInNewYork } from "../lib/sheet";
 
 describe("production jobs.json", () => {
-  it("holds the 11/2/26 sheet week and not the sample fixtures", () => {
+  it("matches today's weekday and leaves the sample fixtures out", () => {
     const jobs = loadJobs();
     const open = jobs.filter((job) => job.status === "open");
-    const sheetJobs = open.filter((job) => job.postalcode !== "03060");
-    assert.equal(open.length, 60);
-    assert.equal(sheetJobs.length, 59);
-    assert.equal(sheetJobs.every((job) => job.date_posted === "2026-11-02"), true);
-    assert.equal(open.every((job) => job.valid_through === "2026-11-08"), true);
-    assert.equal(new Set(open.map((job) => job.postalcode)).size, 60);
+    const today = todayInNewYork();
+    const title = titleForDate(today, parseTitles(titlesFile));
+    if (!title) {
+      assert.equal(open.length, 0);
+    } else {
+      assert.ok(open.length >= 100, `expected the sheet ZIPs to be open, found ${open.length}`);
+      assert.equal(new Set(open.map((job) => job.postalcode)).size, open.length);
+      assert.equal(
+        open.every(
+          (job) =>
+            job.title === title.title &&
+            job.title_id === title.title_id &&
+            job.date_posted === today &&
+            job.valid_through === today &&
+            job.referencenumber.startsWith(
+              `HTL-${job.postalcode}-${today.replaceAll("-", "")}-${title.title_id}-`,
+            ),
+        ),
+        true,
+      );
+    }
     assert.equal(open.every((job) => /^\d{5}$/.test(job.postalcode)), true);
-    assert.equal(new Set(open.map((job) => job.referencenumber)).size, 60);
+    assert.equal(new Set(jobs.map((job) => job.referencenumber)).size, jobs.length);
     assert.equal(
-      open.every(
+      jobs.every(
         (job) =>
           job.pay === "$6 - $17 per audit" &&
           job.jobtype === "contract" &&
-          job.metro &&
           !/contractor/i.test(job.description_html) &&
           job.description_html.startsWith(`<p>${openingLine(job.city, job.state, job.postalcode)}</p>`),
       ),
       true,
     );
-    assert.equal(
-      sheetJobs.every((job) => job.title === "On-Demand Store Auditor" && job.title_id === "store-auditor"),
-      true,
-    );
-    const nashua = open.find((job) => job.city === "Nashua");
-    assert.equal(nashua?.postalcode, "03060");
-    assert.equal(nashua?.title, "Mystery Shopper");
-    assert.equal(nashua?.title_id, "mystery-shopper");
-    assert.equal(nashua?.referencenumber, "HTL-03060-20261105-mystery-shopper-01");
-    assert.equal(nashua?.date_posted, "2026-11-05");
-    const previous = jobs.find((job) => job.referencenumber === "HTL-03060-20261102-store-auditor-01");
-    assert.equal(previous?.status, "closed");
-    assert.equal(previous?.title, "On-Demand Store Auditor");
     const fixtures = new Set(parseJobs(sampleJobs).map((job) => job.referencenumber));
     assert.equal(jobs.some((job) => fixtures.has(job.referencenumber)), false);
   });
