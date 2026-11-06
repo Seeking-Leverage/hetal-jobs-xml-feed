@@ -5,6 +5,7 @@ import titlesFile from "../data/titles.json";
 import sampleJobs from "../fixtures/sample-jobs.json";
 import { openingLine } from "../lib/description";
 import { loadJobs, parseJobs } from "../lib/jobs";
+import { priorityByDateAdded } from "../lib/priority";
 import { parseTitles, planForDate } from "../lib/schedule";
 import { todayInNewYork } from "../lib/sheet";
 
@@ -31,6 +32,11 @@ describe("production jobs.json", () => {
     if (plan.title === null) {
       assert.equal(new Set(open.map((job) => job.title_id)).size, 3);
     }
+    const ranks = priorityByDateAdded(open.map((job) => job.date_added ?? ""));
+    assert.equal(
+      open.every((job) => job.date_added !== undefined && job.priority === ranks.get(job.date_added)),
+      true,
+    );
     assert.equal(open.every((job) => /^\d{5}$/.test(job.postalcode)), true);
     assert.equal(new Set(jobs.map((job) => job.referencenumber)).size, jobs.length);
     assert.equal(

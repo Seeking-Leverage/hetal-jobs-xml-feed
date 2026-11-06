@@ -5,6 +5,7 @@ import titlesFile from "../data/titles.json";
 import sampleJobs from "../fixtures/sample-jobs.json";
 import { openingLine } from "../lib/description";
 import { parseJobs } from "../lib/jobs";
+import { priorityByDateAdded } from "../lib/priority";
 import { parseTitles } from "../lib/schedule";
 import { buildFeedXml } from "../lib/feed";
 import { buildOnelink } from "../lib/onelink";
@@ -39,6 +40,20 @@ describe("sheet import", () => {
     assert.equal(nashua?.state, "NH");
     assert.equal(nashua?.metro, "Boston, MA");
     assert.equal(nashua?.referencenumber, "HTL-03060-20261105-mystery-shopper-01");
+    assert.equal(nashua?.date_added, "2026-11-02");
+    assert.equal(nashua?.priority, 1);
+    const boerne = open.find((job) => job.postalcode === "78006");
+    assert.equal(boerne?.date_added, "2026-10-12");
+    assert.equal(boerne?.priority, 2);
+    const xml = buildFeedXml(thursday, "https://www.hetalretail.com");
+    assert.equal(xml.includes("channel="), false);
+    assert.equal(xml.includes("source="), false);
+    assert.match(
+      xml,
+      /<url><!\[CDATA\[https:\/\/www\.hetalretail\.com\/jobs\/HTL-03060-20261105-mystery-shopper-01\]\]><\/url>/,
+    );
+    assert.match(xml, /<priority>1<\/priority>/);
+    assert.match(xml, /<priority>2<\/priority>/);
     assert.equal(
       nashua?.description_html.startsWith(`<p>${openingLine("Nashua", "NH", "03060")}</p>`),
       true,
@@ -49,6 +64,35 @@ describe("sheet import", () => {
     assert.equal(link.searchParams.get("c"), "xml-feed-hetal-website");
     assert.equal(link.searchParams.get("af_adset"), "mystery-shopper");
     assert.equal([...link.searchParams.keys()].filter((key) => key === "c").length, 1);
+  });
+
+  it("ranks the newest Date Added week as 1 and keeps older weeks at 5", () => {
+    assert.deepEqual(
+      [...priorityByDateAdded(["2026-10-12", "2026-11-02", "2026-10-26", "2026-10-19", "2026-10-05", "2026-09-28"]).entries()],
+      [
+        ["2026-11-02", 1],
+        ["2026-10-26", 2],
+        ["2026-10-19", 3],
+        ["2026-10-12", 4],
+        ["2026-10-05", 5],
+        ["2026-09-28", 5],
+      ],
+    );
+    const older = `City,Zip,Metro,Date Added
+"Nashua, NH",03060,"Boston, MA",10/26/26
+"Secaucus, NJ",07094,"New York, NY",10/12/26
+`;
+    const withNewest = `${older}"Boerne, TX",78006,"San Antonio, TX",11/2/26
+`;
+    const before = syncSheetJobs(parseSheet(older).rows, [], "2026-11-05", titles);
+    assert.equal(before.find((job) => job.status === "open" && job.postalcode === "03060")?.priority, 1);
+    assert.equal(before.find((job) => job.status === "open" && job.postalcode === "07094")?.priority, 2);
+    const after = syncSheetJobs(parseSheet(withNewest).rows, before, "2026-11-05", titles);
+    assert.equal(after.filter((job) => job.status === "open").length, 3);
+    assert.equal(after.find((job) => job.status === "open" && job.postalcode === "78006")?.priority, 1);
+    assert.equal(after.find((job) => job.status === "open" && job.postalcode === "03060")?.priority, 2);
+    assert.equal(after.find((job) => job.status === "open" && job.postalcode === "07094")?.priority, 3);
+    assert.equal(after.find((job) => job.postalcode === "03060" && job.status === "open")?.referencenumber, before.find((job) => job.postalcode === "03060")?.referencenumber);
   });
 
   it("rotates titles by weekday and mixes all three across every ZIP on Friday through Monday", () => {

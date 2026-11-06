@@ -1,6 +1,6 @@
-import { getCompanyName, getFeedEmail } from "./config";
+import { JobsDataError, getCompanyName, getFeedEmail } from "./config";
 import type { Job } from "./types";
-import { jobFeedUrl, publicSiteOrigin } from "./urls";
+import { jobCanonicalUrl, publicSiteOrigin } from "./urls";
 
 function cdata(value: string): string {
   return `<![CDATA[${value.replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
@@ -8,6 +8,19 @@ function cdata(value: string): string {
 
 function tag(name: string, value: string): string {
   return `    <${name}>${cdata(value)}</${name}>`;
+}
+
+function priorityTag(job: Job): string {
+  if (job.priority === undefined || job.priority < 1 || job.priority > 5) {
+    throw new JobsDataError(
+      `Open job ${job.referencenumber} needs a priority from 1 to 5 before it can go in the feed.`,
+    );
+  }
+  return `    <priority>${job.priority}</priority>`;
+}
+
+function jobNode(fields: string[], job: Job): string {
+  return `  <job>\n${fields.join("\n")}\n${priorityTag(job)}\n  </job>`;
 }
 
 function openJobs(jobs: Job[]): Job[] {
@@ -30,7 +43,7 @@ export function buildFeedXml(jobs: Job[], siteUrl: string): string {
         ["date", job.date_posted],
         ["referencenumber", job.referencenumber],
         ["requisitionid", job.requisitionid],
-        ["url", jobFeedUrl(siteUrl, job.referencenumber, "indeed")],
+        ["url", jobCanonicalUrl(siteUrl, job.referencenumber)],
         ["company", company],
         ["city", job.city],
         ["state", job.state],
@@ -41,7 +54,10 @@ export function buildFeedXml(jobs: Job[], siteUrl: string): string {
         ["jobtype", job.jobtype],
         ["salary", job.pay],
       ];
-      return `  <job>\n${fields.map(([name, value]) => tag(name, value)).join("\n")}\n  </job>`;
+      return jobNode(
+        fields.map(([name, value]) => tag(name, value)),
+        job,
+      );
     })
     .join("\n");
 
@@ -63,7 +79,7 @@ export function buildAdzunaFeedXml(jobs: Job[], siteUrl: string): string {
         tag("title", job.title),
         tag("id", job.referencenumber),
         tag("description", job.description_html),
-        tag("url", jobFeedUrl(siteUrl, job.referencenumber, "adzuna")),
+        tag("url", jobCanonicalUrl(siteUrl, job.referencenumber)),
         tag("location", `${job.city}, ${job.state}`),
         tag("postcode", job.postalcode),
         tag("country", job.country),
@@ -78,7 +94,7 @@ export function buildAdzunaFeedXml(jobs: Job[], siteUrl: string): string {
         fields.push(`    <salary_min>${bounds.min}</salary_min>`);
         fields.push(`    <salary_max>${bounds.max}</salary_max>`);
       }
-      return `  <job>\n${fields.join("\n")}\n  </job>`;
+      return jobNode(fields, job);
     })
     .join("\n");
 
@@ -98,7 +114,7 @@ export function buildZipRecruiterFeedXml(jobs: Job[], siteUrl: string): string {
         tag("referencenumber", job.referencenumber),
         tag("title", job.title),
         tag("date", `${job.date_posted}T00:00:00Z`),
-        tag("url", jobFeedUrl(siteUrl, job.referencenumber, "ziprecruiter")),
+        tag("url", jobCanonicalUrl(siteUrl, job.referencenumber)),
         tag("company", company),
         tag("city", job.city),
         tag("state", job.state),
@@ -112,7 +128,7 @@ export function buildZipRecruiterFeedXml(jobs: Job[], siteUrl: string): string {
         fields.push(`    <compensation_min>${bounds.min}</compensation_min>`);
         fields.push(`    <compensation_max>${bounds.max}</compensation_max>`);
       }
-      return `  <job>\n${fields.join("\n")}\n  </job>`;
+      return jobNode(fields, job);
     })
     .join("\n");
 

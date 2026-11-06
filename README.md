@@ -31,6 +31,8 @@ The script checks `/jobs/feed.xml`, `/jobs/adzuna.xml`, and `/jobs/ziprecruiter.
 - every feed URL returns 200 and the title, pay, city, state, ZIP, and description match
 - the download button uses that feed's `pid`, keeps `c=xml-feed-hetal-website`, and adds `af_adset`, `af_sub1`, and `af_sub2`
 - a page opened with no channel keeps `pid=xml-hetal`
+- every job URL in the feed is `/jobs/{referencenumber}` with no `channel` or `source`
+- each job has `<priority>` from 1 to 5, with the newest Date Added week at 1
 
 Set `VALIDATE_BASE_URL` if the app is not on port 43123. Leave `SITE_URL` unset while validating locally so the feed URLs use the same host.
 
@@ -70,7 +72,9 @@ That downloads the published CSV. No Google sign-in is required. To use a local 
 npm run sync-jobs -- path/to/jobs.csv
 ```
 
-Every unique valid 5-digit ZIP on the sheet becomes one job, including older Date Added weeks. Metro is stored for reporting and is left out of the pages and feeds. A ZIP that leaves the sheet is closed and dropped from the feed and sitemap. Running the sync again keeps an existing reference number for the same ZIP, day, and title.
+Every unique valid 5-digit ZIP on the sheet becomes one job, including older Date Added weeks. If a ZIP appears more than once, the latest Date Added is kept. Metro is stored for reporting and is left out of the pages and feeds. A ZIP that leaves the sheet is closed and dropped from the feed and sitemap. Running the sync again keeps an existing reference number for the same ZIP, day, and title.
+
+Priority is recalculated on every sync. Distinct Date Added dates are the weeks. The newest date is `<priority>1</priority>`. Each older date is 2, then 3, then 4. Every date older than that stays at 5. A new week on the sheet becomes 1 and moves the previous newest week to 2. Priority does not create a second job for a ZIP.
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 
@@ -96,11 +100,11 @@ The page is server rendered. It shows the title, pay, city, state, ZIP, and the 
 
 `af_xp=custom`, `c=xml-feed-hetal-website`, and `af_web_dp=https://www.hetalretail.com/become-a-hetalite` stay as written. The title goes in `af_adset`, the ZIP in `af_sub1`, and the reference number in `af_sub2`. The page does not add `c={title_id}`, `c=indeed_launch`, or a second `c` or `pid`.
 
-A page with no `channel` or `source` keeps `pid=xml-hetal`. A feed link sets both, for example `?channel=adzuna&source=Adzuna`, and the button replaces `pid` with that board name. Known channels use Indeed, Adzuna, and ZipRecruiter. Any other safe short slug or name from the query is used as the `pid`. An unsafe value is ignored and the base `pid` stays. Set the same `ONELINK_BASE_URL` in Vercel and Webflow.
+A page with no `channel` or `source` keeps `pid=xml-hetal`. The feed does not add those parameters. If a board later tags the link, for example `?channel=adzuna&source=Adzuna`, the button replaces `pid` with that board name. Known channels use Indeed, Adzuna, and ZipRecruiter. Any other safe short slug or name from the query is used as the `pid`. An unsafe value is ignored and the base `pid` stays. Set `ONELINK_BASE_URL` in Webflow, and in Vercel if it is still set, to the full base URL above. An older Indeed value in that host variable overrides this default until it is replaced.
 
 The page also includes JobPosting JSON-LD for Google for Jobs. There is no apply form and no sign-in. Candidates apply in the app.
 
-The public canonical URL is `https://www.hetalretail.com/jobs/{referencenumber}` with no `channel` or `source` query. A feed link may add those parameters, and the page still points Google at the permanent URL. The old `/jobs/jobs/{referencenumber}` path redirects to that URL. `/jobs/sitemap.xml` lists the home page and the open jobs only, always on `https://www.hetalretail.com`.
+The public canonical URL is `https://www.hetalretail.com/jobs/{referencenumber}` with no `channel` or `source` query. Feed `<url>` values use that same address. A board may add a query later, and the page still points Google at the permanent URL. The old `/jobs/jobs/{referencenumber}` path redirects to that URL. `/jobs/sitemap.xml` lists the home page and the open jobs only, always on `https://www.hetalretail.com`.
 
 A closed job shows "This job is no longer available", returns 410, and does not include JobPosting markup. An unknown reference number returns 404.
 
@@ -137,15 +141,15 @@ npm run notify-google -- --reference HTL-03060-20261102-store-auditor-01 --actio
 
 ## Feed
 
-Each feed returns `Content-Type: application/xml` and lists only open jobs. Text fields are CDATA. The job URL includes `channel` and `source` for that board.
+Each feed returns `Content-Type: application/xml` and lists only open jobs. Text fields are CDATA. Each job URL is `https://www.hetalretail.com/jobs/{referencenumber}` with no query string. Each job also has `<priority>` from 1 to 5. Boards that do not use priority can ignore that element.
 
-| Feed | Path | Download `pid` |
-| --- | --- | --- |
-| Indeed | `/jobs/feed.xml` | `Indeed` |
+| Feed | Path |
+| --- | --- |
+| Shared XML | `/jobs/feed.xml` |
+| Adzuna | `/jobs/adzuna.xml` |
+| ZipRecruiter | `/jobs/ziprecruiter.xml` |
 
 `https://www.hetalretail.com/feed.xml` is the Webflow site, not this app, so it returns Webflow’s 404. The footer link uses `/jobs/feed.xml`. To make the root address open the same file, add a Webflow 301 from `/feed.xml` to `/jobs/feed.xml`.
-| Adzuna | `/jobs/adzuna.xml` | `Adzuna` |
-| ZipRecruiter | `/jobs/ziprecruiter.xml` | `ZipRecruiter` |
 
 Production feeds and the sitemap use `https://www.hetalretail.com`. They do not use localhost or a `vercel.app` host. Job links are `https://www.hetalretail.com/jobs/{referencenumber}`.
 
@@ -153,7 +157,7 @@ Production feeds and the sitemap use `https://www.hetalretail.com`. They do not 
 
 | Variable | Purpose |
 | --- | --- |
-| `ONELINK_BASE_URL` | Download link base. Default `https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`. |
+| `ONELINK_BASE_URL` | Download link base. Default `https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`. Set this full URL in Webflow, and in Vercel if that project still has the variable. An older Indeed value there wins until it is replaced. |
 | `FEED_CONTACT_EMAIL` | Email on every job in the feed. Default `marketing@hetalretail.com`. |
 | `COMPANY_NAME` | Publisher and company. Default `Hetal Retail`. |
 | `SITE_URL` | Public origin for feeds and the sitemap. Production defaults to `https://www.hetalretail.com`. Leave it unset locally. |

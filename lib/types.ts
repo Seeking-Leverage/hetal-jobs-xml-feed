@@ -20,6 +20,10 @@ export type Job = {
   description_html: string;
   status: JobStatus;
   date_posted: string;
+  /** Sheet Date Added, YYYY-MM-DD. The newest date across open jobs is priority 1. */
+  date_added?: string;
+  /** 1 is the newest Date Added week. 5 is the lowest tier. */
+  priority?: 1 | 2 | 3 | 4 | 5;
   /** Last day the visit stays open, inclusive. Title days expire the same day. */
   valid_through?: string;
 };

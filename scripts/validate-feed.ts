@@ -5,6 +5,7 @@ import { XMLValidator } from "fast-xml-parser";
 
 import { getCompanyName, getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { loadJobs } from "../lib/jobs";
+import { priorityByDateAdded } from "../lib/priority";
 import { parseTitles, planForDate } from "../lib/schedule";
 import { todayInNewYork } from "../lib/sheet";
 import type { Job } from "../lib/types";
@@ -149,6 +150,17 @@ async function main() {
         : `${open.length} open jobs mix all three titles from ${plan.date} through ${plan.validThrough}`,
     );
   }
+  const ranks = priorityByDateAdded(open.map((job) => job.date_added ?? ""));
+  if (
+    open.some((job) => {
+      const rank = job.date_added ? ranks.get(job.date_added) : undefined;
+      return rank === undefined || job.priority !== rank;
+    })
+  ) {
+    fail("open job priorities do not match Date Added weeks");
+  } else {
+    ok("open job priorities match Date Added weeks");
+  }
   if (
     new Set(open.map((job) => job.postalcode)).size !== open.length ||
     open.some((job) => !/^\d{5}$/.test(job.postalcode))
@@ -249,6 +261,9 @@ async function main() {
       if (value.trim() === "") fail(`job ${index + 1} <${tag}> is empty`);
       row[tag] = value;
     }
+    const priority = block.match(/<priority>\s*([1-5])\s*<\/priority>/)?.[1];
+    if (!priority) fail(`job ${index + 1} is missing <priority> of 1 through 5`);
+    else row.priority = priority;
     if (JOB_TAGS.every((tag) => row[tag] !== undefined)) rows.push(row);
   }
 
@@ -328,11 +343,11 @@ async function main() {
     if (feedUrl.pathname !== `/jobs/${job.referencenumber}` || feedUrl.pathname.includes("/jobs/jobs/")) {
       fail(`${job.referencenumber} url path is ${feedUrl.pathname}, expected /jobs/${job.referencenumber}`);
     }
-    if (feedUrl.searchParams.get("source") !== "Indeed") {
-      fail(`${job.referencenumber} url is missing source=Indeed`);
+    if (feedUrl.search !== "") {
+      fail(`${job.referencenumber} url must have no query string, received ${feedUrl.search}`);
     }
-    if (feedUrl.searchParams.get("channel") !== "indeed") {
-      fail(`${job.referencenumber} url is missing channel=indeed`);
+    if (row.priority !== String(job.priority)) {
+      fail(`${job.referencenumber} <priority> is ${row.priority}, expected ${job.priority}`);
     }
 
     const page = await fetch(feedUrl, {
@@ -389,9 +404,9 @@ async function main() {
     const mismatched = expectedParams.filter(
       ([key, value]) => apply.searchParams.get(key) !== value,
     );
-    if (pidCount !== 1 || apply.searchParams.get("pid") !== "Indeed") {
+    if (pidCount !== 1 || apply.searchParams.get("pid") !== "xml-hetal") {
       fail(
-        `${job.referencenumber} link must use a single pid=Indeed from the feed (${applyHref})`,
+        `${job.referencenumber} link must keep a single pid=xml-hetal when the feed URL has no board (${applyHref})`,
       );
     } else if (cCount !== 1) {
       fail(`${job.referencenumber} link must contain c exactly once (${applyHref})`);
@@ -407,7 +422,7 @@ async function main() {
       );
     }
   }
-  ok("Indeed pages match title, pay, location, description, and pid=Indeed");
+  ok("feed pages match title, pay, location, description, and pid=xml-hetal");
 
   if (open[0]) {
     const plain = await fetch(`${base}/${encodeURIComponent(open[0].referencenumber)}`, {
@@ -436,6 +451,29 @@ async function main() {
       fail("a job page without channel must start from the base OneLink and keep pid=xml-hetal");
     } else {
       ok("job page without channel starts from the base OneLink and keeps pid=xml-hetal");
+    }
+
+    const tagged = await fetch(
+      `${base}/${encodeURIComponent(open[0].referencenumber)}?channel=adzuna&source=Adzuna`,
+      { redirect: "manual", signal: AbortSignal.timeout(15000) },
+    );
+    const taggedHtml = await tagged.text();
+    const taggedHref = [...taggedHtml.matchAll(/href="([^"]+)"/g)]
+      .map((match) => decodeHtml(match[1]))
+      .find((value) => value.includes("af_sub2="));
+    const taggedLink = taggedHref ? new URL(taggedHref) : undefined;
+    const taggedKeys = taggedLink ? [...taggedLink.searchParams.keys()] : [];
+    if (
+      tagged.status !== 200 ||
+      !taggedLink ||
+      taggedLink.searchParams.get("pid") !== "Adzuna" ||
+      taggedKeys.filter((key) => key === "pid").length !== 1 ||
+      taggedKeys.filter((key) => key === "c").length !== 1 ||
+      taggedLink.searchParams.get("c") !== "xml-feed-hetal-website"
+    ) {
+      fail("a job page with channel=adzuna must use pid=Adzuna and one website campaign");
+    } else {
+      ok("a job page with channel=adzuna uses pid=Adzuna and one website campaign");
     }
   }
 
@@ -467,8 +505,6 @@ async function main() {
   async function checkChannelFeed(options: {
     path: string;
     idTag: string;
-    pid: string;
-    channel: string;
     tags: string[];
   }) {
     const response = await fetch(`${base}${options.path}`, {
@@ -539,8 +575,14 @@ async function main() {
       const urlValue = cdataField(block, "url");
       if (!urlValue) continue;
       const feedUrl = new URL(urlValue);
-      if (feedUrl.searchParams.get("channel") !== options.channel) {
-        fail(`${options.path} ${job.referencenumber} url is missing channel=${options.channel}`);
+      if (feedUrl.search !== "") {
+        fail(`${options.path} ${job.referencenumber} url must have no query string`);
+      }
+      const priority = block.match(/<priority>\s*([1-5])\s*<\/priority>/)?.[1];
+      if (priority !== String(job.priority)) {
+        fail(
+          `${options.path} ${job.referencenumber} priority is ${priority ?? "missing"}, expected ${job.priority}`,
+        );
       }
       const page = await fetch(feedUrl, {
         redirect: "manual",
@@ -579,30 +621,26 @@ async function main() {
       if (
         pidCount !== 1 ||
         cCount !== 1 ||
-        apply.searchParams.get("pid") !== options.pid ||
+        apply.searchParams.get("pid") !== "xml-hetal" ||
         apply.searchParams.get("c") !== "xml-feed-hetal-website" ||
         apply.searchParams.get("af_adset") !== job.title_id ||
         apply.searchParams.get("af_sub1") !== job.postalcode ||
         apply.searchParams.get("af_sub2") !== job.referencenumber
       ) {
-        fail(`${options.path} ${job.referencenumber} download link does not match ${options.pid}`);
+        fail(`${options.path} ${job.referencenumber} download link does not keep pid=xml-hetal`);
       }
     }
-    ok(`${options.path} lists every open job and uses pid=${options.pid}`);
+    ok(`${options.path} lists every open job at a plain URL and keeps pid=xml-hetal`);
   }
 
   await checkChannelFeed({
     path: "/adzuna.xml",
     idTag: "id",
-    pid: "Adzuna",
-    channel: "adzuna",
     tags: ["title", "description", "url", "location", "postcode", "country", "salary", "company"],
   });
   await checkChannelFeed({
     path: "/ziprecruiter.xml",
     idTag: "referencenumber",
-    pid: "ZipRecruiter",
-    channel: "ziprecruiter",
     tags: ["title", "description", "url", "city", "state", "country", "postalcode", "salary", "company"],
   });
 

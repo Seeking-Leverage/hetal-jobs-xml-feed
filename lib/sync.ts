@@ -1,4 +1,5 @@
 import { JOB_PAY, JOB_TYPE, descriptionHtml } from "./description";
+import { priorityByDateAdded } from "./priority";
 import { nextReference, planForDate, type JobTitle } from "./schedule";
 import { uniqueZips, type SheetRow } from "./sheet";
 import type { Job } from "./types";
@@ -24,6 +25,7 @@ export function syncSheetJobs(
   titles: JobTitle[],
 ): Job[] {
   const places = uniqueZips(rows).sort((a, b) => a.postalcode.localeCompare(b.postalcode));
+  const priorities = priorityByDateAdded(places.map((place) => place.date_posted));
   const plan = planForDate(today, titles);
   const jobs: Job[] = existing.map((job) => ({ ...job, status: "closed" }));
   const used = new Set(jobs.map((job) => job.referencenumber));
@@ -49,6 +51,8 @@ export function syncSheetJobs(
       prior.requisitionid = `REQ-${title.title_id.toUpperCase()}`;
       prior.description_html = descriptionHtml(place.city, place.state, place.postalcode);
       prior.valid_through = plan.validThrough;
+      prior.date_added = place.date_posted;
+      prior.priority = priorities.get(place.date_posted) ?? 5;
       return;
     }
 
@@ -69,6 +73,8 @@ export function syncSheetJobs(
       description_html: descriptionHtml(place.city, place.state, place.postalcode),
       status: "open",
       date_posted: plan.date,
+      date_added: place.date_posted,
+      priority: priorities.get(place.date_posted) ?? 5,
       valid_through: plan.validThrough,
     });
   });

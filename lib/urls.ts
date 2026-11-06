@@ -1,5 +1,3 @@
-import { CHANNEL_PID, type Channel } from "./channels";
-
 /** Webflow Cloud mounts this app at /jobs on www.hetalretail.com. */
 export const MOUNT_PATH = "/jobs";
 export const PUBLIC_SITE_ORIGIN = "https://www.hetalretail.com";
@@ -65,13 +63,3 @@ export function sitemapJobUrls(
     .map((job) => jobCanonicalUrl(origin, job.referencenumber));
 }
 
-export function jobFeedUrl(
-  siteUrl: string,
-  referencenumber: string,
-  channel: Channel = "indeed",
-): string {
-  const url = new URL(jobCanonicalUrl(siteUrl, referencenumber));
-  url.searchParams.set("channel", channel);
-  url.searchParams.set("source", CHANNEL_PID[channel]);
-  return url.toString();
-}

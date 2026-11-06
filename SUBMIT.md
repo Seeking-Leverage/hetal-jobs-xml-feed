@@ -12,7 +12,7 @@ Every feed lists only the jobs with `status` `open` in `data/jobs.json`.
 
 `FEED_CONTACT_EMAIL` is the `<email>` inside every job. The default is `marketing@hetalretail.com`. Use that address on the Indeed employer account.
 
-The download button starts from this OneLink. It keeps `c=xml-feed-hetal-website`, `af_xp=custom`, and the become-a-hetalite `af_web_dp`. A click from the Indeed feed sets `pid=Indeed`. A page with no board keeps `pid=xml-hetal`. The title is `af_adset`, the ZIP is `af_sub1`, and the reference number is `af_sub2`.
+The download button starts from this OneLink. It keeps `c=xml-feed-hetal-website`, `af_xp=custom`, and the become-a-hetalite `af_web_dp`. Feed URLs do not include `channel` or `source`, so a click from the feed keeps `pid=xml-hetal`. A board that appends `?channel=adzuna&source=Adzuna` gets `pid=Adzuna`. The title is `af_adset`, the ZIP is `af_sub1`, and the reference number is `af_sub2`. Set `ONELINK_BASE_URL` in Webflow to the full URL below. An older Indeed value in that setting overrides the default until it is replaced.
 
 `https://hetalretail.onelink.me/sfUI?af_xp=custom&pid=xml-hetal&c=xml-feed-hetal-website&af_web_dp=https%3A%2F%2Fwww.hetalretail.com%2Fbecome-a-hetalite`
 

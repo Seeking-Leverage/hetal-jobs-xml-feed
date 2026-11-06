@@ -3,6 +3,7 @@ import path from "node:path";
 
 import rawJobs from "../data/jobs.json";
 import { JobsDataError } from "./config";
+import type { Priority } from "./priority";
 import { JOB_STATUSES, JOB_TYPES, type Job, type JobStatus, type JobType } from "./types";
 
 const ENTITY = /&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]+);/;
@@ -160,6 +161,23 @@ function normalizeJob(value: unknown, index: number): Job {
     assertNoEntities("metro", metro, index);
   }
 
+  let date_added: string | undefined;
+  if (typeof record.date_added === "string" && record.date_added.trim() !== "") {
+    date_added = record.date_added.trim();
+    if (!DATE_PATTERN.test(date_added) || Number.isNaN(Date.parse(`${date_added}T00:00:00Z`))) {
+      throw new JobsDataError(`jobs[${index}].date_added must be an ISO-8601 date, YYYY-MM-DD.`);
+    }
+  }
+
+  let priority: Priority | undefined;
+  if (record.priority !== undefined && record.priority !== "") {
+    const number = typeof record.priority === "number" ? record.priority : Number(record.priority);
+    if (![1, 2, 3, 4, 5].includes(number)) {
+      throw new JobsDataError(`jobs[${index}].priority must be an integer from 1 to 5.`);
+    }
+    priority = number as Priority;
+  }
+
   let valid_through: string | undefined;
   if (typeof record.valid_through === "string" && record.valid_through.trim() !== "") {
     valid_through = record.valid_through.trim();
@@ -202,6 +220,8 @@ function normalizeJob(value: unknown, index: number): Job {
     description_html,
     status: status as JobStatus,
     date_posted,
+    ...(date_added ? { date_added } : {}),
+    ...(priority ? { priority } : {}),
     ...(valid_through ? { valid_through } : {}),
   };
 }
