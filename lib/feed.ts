@@ -1,4 +1,5 @@
 import { JobsDataError, getCompanyName, getFeedEmail } from "./config";
+import { openJobs } from "./jobs";
 import type { Job } from "./types";
 import { jobCanonicalUrl, publicSiteOrigin } from "./urls";
 
@@ -21,10 +22,6 @@ function priorityTag(job: Job): string {
 
 function jobNode(fields: string[], job: Job): string {
   return `  <job>\n${fields.join("\n")}\n${priorityTag(job)}\n  </job>`;
-}
-
-function openJobs(jobs: Job[]): Job[] {
-  return jobs.filter((job) => job.status === "open");
 }
 
 function payBounds(pay: string): { min: string; max: string } | undefined {

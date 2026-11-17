@@ -261,6 +261,28 @@ export function findJob(referencenumber: string): Job | undefined {
   return loadJobs().find((job) => job.referencenumber === ref);
 }
 
+function priorityRank(job: Job): number {
+  return job.priority ?? 6;
+}
+
+/**
+ * Priority 1, then 2, 3, 4, 5. Inside a priority: state, then city, then ZIP.
+ * Reference number breaks remaining ties so a later sheet sync keeps the same order.
+ * A job with no priority sorts after priority 5.
+ */
+export function compareJobs(a: Job, b: Job): number {
+  const byPriority = priorityRank(a) - priorityRank(b);
+  if (byPriority !== 0) return byPriority;
+  const byState = a.state.localeCompare(b.state, "en");
+  if (byState !== 0) return byState;
+  const byCity = a.city.localeCompare(b.city, "en");
+  if (byCity !== 0) return byCity;
+  const byZip = a.postalcode.localeCompare(b.postalcode, "en");
+  if (byZip !== 0) return byZip;
+  return a.referencenumber.localeCompare(b.referencenumber, "en");
+}
+
+/** Open jobs in compareJobs order. The listing, sitemap, and XML feeds all use this. */
 export function openJobs(jobs: Job[] = loadJobs()): Job[] {
-  return jobs.filter((job) => job.status === "open");
+  return jobs.filter((job) => job.status === "open").sort(compareJobs);
 }

@@ -1,16 +1,9 @@
 import { JOB_PAY, JOB_TYPE, descriptionHtml } from "./description";
+import { compareJobs } from "./jobs";
 import { priorityByDateAdded } from "./priority";
 import { nextReference, planForDate, type JobTitle } from "./schedule";
 import { uniqueZips, type SheetRow } from "./sheet";
 import type { Job } from "./types";
-
-function sortJobs(jobs: Job[]): Job[] {
-  return jobs.sort((a, b) =>
-    `${a.state}${a.city}${a.postalcode}${a.referencenumber}`.localeCompare(
-      `${b.state}${b.city}${b.postalcode}${b.referencenumber}`,
-    ),
-  );
-}
 
 /**
  * One open job per sheet ZIP every day.
@@ -79,5 +72,5 @@ export function syncSheetJobs(
     });
   });
 
-  return sortJobs(jobs);
+  return jobs.sort(compareJobs);
 }
