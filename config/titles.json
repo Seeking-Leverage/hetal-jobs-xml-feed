@@ -1,0 +1,29 @@
+{
+  "start_date": "2026-11-17",
+  "titles": [
+    {
+      "title": "In-Store Auditor",
+      "title_id": "in-store-auditor",
+      "active": true,
+      "weight": 1
+    },
+    {
+      "title": "Flexible Gig | Shelf Auditor | Available Now",
+      "title_id": "flexible-gig-shelf-auditor",
+      "active": true,
+      "weight": 1
+    },
+    {
+      "title": "In-Store Shelf Auditor - Flexible Gig, Fast Cash",
+      "title_id": "shelf-auditor-fast-cash",
+      "active": true,
+      "weight": 1
+    },
+    {
+      "title": "In-Store Shelf Auditor - No Driving",
+      "title_id": "shelf-auditor-no-driving",
+      "active": true,
+      "weight": 1
+    }
+  ]
+}

@@ -78,19 +78,15 @@ Priority is recalculated on every sync. Distinct Date Added dates are the weeks.
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 
-The same sync runs before every production build. A GitHub Action also runs it at least every six hours, commits `data/jobs.json` when it changes, and pushes so Webflow Cloud deploys the update. A ZIP added to the sheet shows up after that run. No approval step is required.
+The same sync runs before every production build. A GitHub Action also runs it at least every six hours, commits `data/jobs.json` and `data/title-history.json` when they change, and pushes so Webflow Cloud deploys the update. A ZIP added to the sheet shows up after that run. No approval step is required.
 
-## Weekday titles
+## Title pool
 
-`data/titles.json` is the catalog. America/New_York decides the day:
+`config/titles.json` is the only file to edit for titles. Each entry has the exact title text, a `title_id` slug, `active`, and `weight` (default 1). Set `active` to false to pause a title. A weight above 1 keeps that title for that many days in a row.
 
-1. Tuesday: On-Demand Store Auditor (`store-auditor`)
-2. Wednesday: Retail Merchandiser (`retail-merchandiser`)
-3. Thursday: Mystery Shopper (`mystery-shopper`)
+America/New_York decides the date. The first sheet sync of a day assigns the next active title to every open ZIP, then the list loops. `start_date` is day zero. Later syncs on that same date keep the title and the reference numbers. Each new date closes the previous day's jobs and gives every ZIP a new `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` reference. The feed always has one open job per sheet ZIP. `data/title-history.json` stores one row per day with the date, title, and `title_id`.
 
-Friday through Monday keep every ZIP open and split the three titles across them. ZIPs are sorted, then the titles rotate so each title covers about a third of the list. That mix is dated Friday and stays the same through Monday, including the same reference numbers. The rotation shifts the next Friday.
-
-A ZIP never has two open jobs. When the title changes, the new visit gets a new `HTL-{ZIP}-{YYYYMMDD}-{title_id}-{NN}` reference and the previous one stays closed. Reference numbers are never reused. The page title, every feed, and the OneLink `af_adset` value all use that job's title. `af_sub2` is its reference number. `c` stays `xml-feed-hetal-website`.
+The page title, every feed, and the OneLink `af_adset` value all use that day's title. `af_sub2` is the reference number. `c` stays `xml-feed-hetal-website`.
 
 ## What a job page does
 
@@ -173,8 +169,8 @@ Webflow Cloud hosts this app at `https://www.hetalretail.com/jobs`. The mount pa
 
 Set `SITE_URL=https://www.hetalretail.com` in the Webflow environment if you want it explicit. When it is unset, production still publishes that origin.
 
-The scheduled refresh is `.github/workflows/sync-jobs.yml`. It fetches the sheet, updates `data/jobs.json`, and pushes to `main` so Webflow deploys. You can also run it by hand from the Actions tab.
+The scheduled refresh is `.github/workflows/sync-jobs.yml`. It fetches the sheet, updates `data/jobs.json` and `data/title-history.json`, and pushes to `main` so Webflow deploys. You can also run it by hand from the Actions tab.
 
 ## Not in this version
 
-No Google user sign-in, no apply form, no accounts, and no performance reporting. `npm run notify-google` uses a service account when you choose to run it. Titles change by weekday without an approval file.
+No Google user sign-in, no apply form, no accounts, and no performance reporting. `npm run notify-google` uses a service account when you choose to run it. Titles come from `config/titles.json` and do not need an approval file.

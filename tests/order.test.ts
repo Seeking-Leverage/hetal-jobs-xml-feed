@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import sitemap from "../app/sitemap";
-import titlesFile from "../data/titles.json";
+import titlesFile from "../config/titles.json";
 import { buildAdzunaFeedXml, buildFeedXml, buildZipRecruiterFeedXml } from "../lib/feed";
 import { compareJobs, loadJobs, openJobs } from "../lib/jobs";
-import { parseTitles } from "../lib/schedule";
+import { parseTitlePool } from "../lib/schedule";
 import { parseSheet } from "../lib/sheet";
 import { syncSheetJobs } from "../lib/sync";
 import type { Job } from "../lib/types";
 import { jobCanonicalUrl, jobsHomeUrl } from "../lib/urls";
 
-const titles = parseTitles(titlesFile);
+const titles = parseTitlePool(titlesFile);
 const site = "https://www.hetalretail.com";
 
 function visit(

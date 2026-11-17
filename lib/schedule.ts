@@ -5,88 +5,136 @@ export type JobTitle = {
   title: string;
 };
 
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+export type PoolTitle = JobTitle & {
+  active: boolean;
+  weight: number;
+};
 
-export function weekdayIndex(isoDate: string): number {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-}
+export type TitlePool = {
+  start_date: string;
+  titles: PoolTitle[];
+};
 
-export function weekdayName(isoDate: string): string {
-  return WEEKDAYS[weekdayIndex(isoDate)];
-}
+export type TitleHistoryEntry = {
+  date: string;
+  title: string;
+  title_id: string;
+};
 
-export function parseTitles(source: unknown): JobTitle[] {
-  if (!Array.isArray(source) || source.length !== 3) {
-    throw new JobsDataError("data/titles.json must list exactly three titles.");
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function asRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new JobsDataError(`${label} must be an object.`);
   }
-  return source.map((entry, index) => {
-    if (!entry || typeof entry !== "object") {
-      throw new JobsDataError(`titles[${index}] must be an object.`);
-    }
-    const record = entry as Record<string, unknown>;
-    const title_id = record.title_id;
-    const title = record.title;
-    if (typeof title_id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(title_id)) {
+  return value as Record<string, unknown>;
+}
+
+export function parseTitlePool(source: unknown): TitlePool {
+  const record = asRecord(source, "config/titles.json");
+  const start_date = record.start_date;
+  if (typeof start_date !== "string" || !DATE_PATTERN.test(start_date)) {
+    throw new JobsDataError("config/titles.json start_date must be YYYY-MM-DD.");
+  }
+  if (!Array.isArray(record.titles) || record.titles.length === 0) {
+    throw new JobsDataError("config/titles.json must list at least one title.");
+  }
+
+  const seen = new Set<string>();
+  const titles = record.titles.map((entry, index) => {
+    const titleRecord = asRecord(entry, `titles[${index}]`);
+    const title_id = titleRecord.title_id;
+    const title = titleRecord.title;
+    if (typeof title_id !== "string" || !SLUG_PATTERN.test(title_id)) {
       throw new JobsDataError(`titles[${index}].title_id must be a lowercase slug.`);
     }
+    if (seen.has(title_id)) {
+      throw new JobsDataError(`titles[${index}].title_id ${title_id} is used more than once.`);
+    }
+    seen.add(title_id);
     if (typeof title !== "string" || title.trim() === "") {
       throw new JobsDataError(`titles[${index}].title must be text.`);
     }
-    return { title_id, title: title.trim() };
+    const active = titleRecord.active === undefined ? true : titleRecord.active;
+    if (typeof active !== "boolean") {
+      throw new JobsDataError(`titles[${index}].active must be true or false.`);
+    }
+    const weight = titleRecord.weight === undefined ? 1 : titleRecord.weight;
+    if (typeof weight !== "number" || !Number.isInteger(weight) || weight < 1) {
+      throw new JobsDataError(`titles[${index}].weight must be a positive integer.`);
+    }
+    return { title_id, title, active, weight };
   });
+
+  return { start_date, titles };
 }
 
-function shiftDate(isoDate: string, days: number): string {
+/** Active titles expanded by weight. An inactive title is left out. */
+export function activeCycle(pool: TitlePool): JobTitle[] {
+  const cycle: JobTitle[] = [];
+  for (const entry of pool.titles) {
+    if (!entry.active) continue;
+    for (let count = 0; count < entry.weight; count += 1) {
+      cycle.push({ title_id: entry.title_id, title: entry.title });
+    }
+  }
+  if (cycle.length === 0) {
+    throw new JobsDataError("config/titles.json needs at least one active title.");
+  }
+  return cycle;
+}
+
+function utcDay(isoDate: string): number {
   const [year, month, day] = isoDate.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
+  return Date.UTC(year, month - 1, day);
+}
+
+function daysFromStart(start: string, today: string): number {
+  return Math.round((utcDay(today) - utcDay(start)) / 86_400_000);
+}
+
+/**
+ * The title for one Eastern calendar date.
+ * Day zero is start_date. The cycle is the active titles in file order, each repeated by its weight.
+ * The same date always returns the same title.
+ */
+export function titleForDate(today: string, pool: TitlePool): JobTitle {
+  const cycle = activeCycle(pool);
+  const index = daysFromStart(pool.start_date, today) % cycle.length;
+  return cycle[(index + cycle.length) % cycle.length];
 }
 
 export type OpenPlan = {
   /** Date stored on the job and in its reference number. */
   date: string;
   validThrough: string;
-  /** Set when every ZIP uses the same title. Null when titles are mixed. */
-  title: JobTitle | null;
+  title: JobTitle;
   titleAt: (index: number) => JobTitle;
 };
 
-/**
- * Tuesday, Wednesday, and Thursday each use one title for every ZIP.
- * Friday through Monday use all three titles, split across every ZIP.
- * That mix is dated Friday and stays the same through Monday.
- * titles[0] is Tuesday, titles[1] is Wednesday, titles[2] is Thursday.
- */
-export function planForDate(today: string, titles: JobTitle[]): OpenPlan {
-  if (titles.length !== 3) {
-    throw new JobsDataError("The weekday rotation needs exactly three titles.");
-  }
-  const day = weekdayIndex(today);
-  if (day >= 2 && day <= 4) {
-    const title = titles[day - 2];
-    return {
-      date: today,
-      validThrough: today,
-      title,
-      titleAt: () => title,
-    };
-  }
-  const daysSinceFriday = day === 5 ? 0 : day === 6 ? 1 : day === 0 ? 2 : 3;
-  const friday = shiftDate(today, -daysSinceFriday);
-  const offset = Number(friday.replaceAll("-", "")) % 3;
+/** Every open ZIP uses the same title for this date. The title lasts through that date. */
+export function planForDate(today: string, pool: TitlePool): OpenPlan {
+  const title = titleForDate(today, pool);
   return {
-    date: friday,
-    validThrough: shiftDate(friday, 3),
-    title: null,
-    titleAt: (index) => titles[(index + offset) % 3],
+    date: today,
+    validThrough: today,
+    title,
+    titleAt: () => title,
   };
 }
 
-/** The single title for a Tuesday, Wednesday, or Thursday. Other days return null. */
-export function titleForDate(today: string, titles: JobTitle[]): JobTitle | null {
-  return planForDate(today, titles).title;
+/** One row per date. A later sync on the same date replaces that row instead of adding another. */
+export function recordTitleDay(
+  history: TitleHistoryEntry[],
+  today: string,
+  title: JobTitle,
+): TitleHistoryEntry[] {
+  const row: TitleHistoryEntry = { date: today, title: title.title, title_id: title.title_id };
+  const next = history.filter((entry) => entry.date !== today);
+  next.push(row);
+  next.sort((a, b) => a.date.localeCompare(b.date));
+  return next;
 }
 
 function sequence(number: number): string {

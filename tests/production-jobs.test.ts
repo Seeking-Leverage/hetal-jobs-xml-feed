@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import titlesFile from "../data/titles.json";
+import titlesFile from "../config/titles.json";
 import sampleJobs from "../fixtures/sample-jobs.json";
 import { openingLine } from "../lib/description";
 import { loadJobs, parseJobs } from "../lib/jobs";
 import { priorityByDateAdded } from "../lib/priority";
-import { parseTitles, planForDate } from "../lib/schedule";
+import { parseTitlePool, planForDate } from "../lib/schedule";
 import { todayInNewYork } from "../lib/sheet";
 
 describe("production jobs.json", () => {
-  it("matches today's weekday and leaves the sample fixtures out", () => {
+  it("matches today's title and leaves the sample fixtures out", () => {
     const jobs = loadJobs();
     const open = jobs.filter((job) => job.status === "open");
     const today = todayInNewYork();
-    const plan = planForDate(today, parseTitles(titlesFile));
+    const plan = planForDate(today, parseTitlePool(titlesFile));
     assert.ok(open.length >= 100, `expected the sheet ZIPs to be open, found ${open.length}`);
     assert.equal(new Set(open.map((job) => job.postalcode)).size, open.length);
     assert.equal(
@@ -22,16 +22,14 @@ describe("production jobs.json", () => {
         (job) =>
           job.date_posted === plan.date &&
           job.valid_through === plan.validThrough &&
-          (plan.title === null || job.title_id === plan.title.title_id) &&
+          job.title === plan.title.title &&
+          job.title_id === plan.title.title_id &&
           job.referencenumber.startsWith(
             `HTL-${job.postalcode}-${plan.date.replaceAll("-", "")}-${job.title_id}-`,
           ),
       ),
       true,
     );
-    if (plan.title === null) {
-      assert.equal(new Set(open.map((job) => job.title_id)).size, 3);
-    }
     const ranks = priorityByDateAdded(open.map((job) => job.date_added ?? ""));
     assert.equal(
       open.every((job) => job.date_added !== undefined && job.priority === ranks.get(job.date_added)),

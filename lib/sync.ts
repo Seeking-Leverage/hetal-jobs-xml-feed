@@ -1,21 +1,20 @@
 import { JOB_PAY, JOB_TYPE, descriptionHtml } from "./description";
 import { compareJobs } from "./jobs";
 import { priorityByDateAdded } from "./priority";
-import { nextReference, planForDate, type JobTitle } from "./schedule";
+import { nextReference, planForDate, type TitlePool } from "./schedule";
 import { uniqueZips, type SheetRow } from "./sheet";
 import type { Job } from "./types";
 
 /**
- * One open job per sheet ZIP every day.
- * Tuesday, Wednesday, and Thursday each use one title.
- * Friday through Monday split the three titles across the ZIPs and keep that mix through Monday.
- * A ZIP that leaves the sheet stays closed. A new title gets a new reference number.
+ * One open job per sheet ZIP every day, all on that day's title.
+ * A ZIP that leaves the sheet stays closed.
+ * A new date gets a new reference number and closes the previous day's jobs.
  */
 export function syncSheetJobs(
   rows: SheetRow[],
   existing: Job[],
   today: string,
-  titles: JobTitle[],
+  titles: TitlePool,
 ): Job[] {
   const places = uniqueZips(rows).sort((a, b) => a.postalcode.localeCompare(b.postalcode));
   const priorities = priorityByDateAdded(places.map((place) => place.date_posted));

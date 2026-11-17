@@ -6,7 +6,7 @@ import { XMLValidator } from "fast-xml-parser";
 import { getCompanyName, getFeedEmail, getOnelinkBaseUrl } from "../lib/config";
 import { loadJobs } from "../lib/jobs";
 import { priorityByDateAdded } from "../lib/priority";
-import { parseTitles, planForDate } from "../lib/schedule";
+import { parseTitlePool, planForDate } from "../lib/schedule";
 import { todayInNewYork } from "../lib/sheet";
 import type { Job } from "../lib/types";
 
@@ -128,9 +128,8 @@ async function main() {
   const today = todayInNewYork();
   const plan = planForDate(
     today,
-    parseTitles(JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "titles.json"), "utf8"))),
+    parseTitlePool(JSON.parse(fs.readFileSync(path.join(process.cwd(), "config", "titles.json"), "utf8"))),
   );
-  const titleIds = new Set(open.map((job) => job.title_id));
   const matchesPlan =
     new Set(open.map((job) => job.postalcode)).size === open.length &&
     open.length >= 100 &&
@@ -138,17 +137,13 @@ async function main() {
       (job) =>
         job.date_posted === plan.date &&
         job.valid_through === plan.validThrough &&
-        (plan.title === null || job.title_id === plan.title.title_id),
-    ) &&
-    (plan.title !== null || titleIds.size === 3);
+        job.title_id === plan.title.title_id &&
+        job.title === plan.title.title,
+    );
   if (!matchesPlan) {
     fail(`open jobs do not match the ${today} plan`);
   } else {
-    ok(
-      plan.title
-        ? `${open.length} open jobs use ${plan.title.title} on ${today}`
-        : `${open.length} open jobs mix all three titles from ${plan.date} through ${plan.validThrough}`,
-    );
+    ok(`${open.length} open jobs use ${plan.title.title} on ${today}`);
   }
   const ranks = priorityByDateAdded(open.map((job) => job.date_added ?? ""));
   if (

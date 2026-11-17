@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { loadLocalEnv } from "../lib/env-file";
 import { loadJobs } from "../lib/jobs";
-import { parseTitles } from "../lib/schedule";
+import { parseTitlePool, recordTitleDay, titleForDate, type TitleHistoryEntry } from "../lib/schedule";
 import { DEFAULT_CSV_URL, parseSheet, todayInNewYork } from "../lib/sheet";
 import { syncSheetJobs } from "../lib/sync";
 
@@ -30,15 +30,23 @@ async function main() {
 
   const root = process.cwd();
   const jobsPath = path.join(root, "data", "jobs.json");
-  const titles = parseTitles(JSON.parse(fs.readFileSync(path.join(root, "data", "titles.json"), "utf8")));
+  const historyPath = path.join(root, "data", "title-history.json");
+  const pool = parseTitlePool(
+    JSON.parse(fs.readFileSync(path.join(root, "config", "titles.json"), "utf8")),
+  );
   const existing = fs.existsSync(jobsPath) ? loadJobs() : [];
   const today = todayInNewYork();
-  const jobs = syncSheetJobs(parsed.rows, existing, today, titles);
+  const jobs = syncSheetJobs(parsed.rows, existing, today, pool);
   fs.writeFileSync(jobsPath, `${JSON.stringify(jobs, null, 2)}\n`);
+  const title = titleForDate(today, pool);
+  const history = fs.existsSync(historyPath)
+    ? (JSON.parse(fs.readFileSync(historyPath, "utf8")) as TitleHistoryEntry[])
+    : [];
+  fs.writeFileSync(historyPath, `${JSON.stringify(recordTitleDay(history, today, title), null, 2)}\n`);
   const open = jobs.filter((job) => job.status === "open");
   const counts = new Map<string, number>();
   for (const job of open) counts.set(job.title, (counts.get(job.title) ?? 0) + 1);
-  const summary = [...counts.entries()].map(([title, count]) => `${count} ${title}`).join(", ") || "none";
+  const summary = [...counts.entries()].map(([jobTitle, count]) => `${count} ${jobTitle}`).join(", ") || "none";
   console.log(
     `Wrote ${jobs.length} jobs (${open.length} open: ${summary}; ${jobs.length - open.length} closed) for ${today}.`,
   );

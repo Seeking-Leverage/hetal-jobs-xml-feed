@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import titlesFile from "../data/titles.json";
+import titlesFile from "../config/titles.json";
 import sampleJobs from "../fixtures/sample-jobs.json";
 import { openingLine } from "../lib/description";
 import { parseJobs } from "../lib/jobs";
 import { priorityByDateAdded } from "../lib/priority";
-import { parseTitles } from "../lib/schedule";
+import { parseTitlePool, titleForDate } from "../lib/schedule";
 import { buildFeedXml } from "../lib/feed";
 import { buildOnelink } from "../lib/onelink";
 import { parseSheet, rowsFromCsv } from "../lib/sheet";
 import { syncSheetJobs } from "../lib/sync";
 import { jobCanonicalUrl, publicSiteOrigin } from "../lib/urls";
 
-const titles = parseTitles(titlesFile);
+const titles = parseTitlePool(titlesFile);
 const csv = `City,Zip,Metro,Date Added
 "Nashua, NH",3060,"Boston, MA",11/2/26
 "Nashua, NH",3060,"Boston, MA",11/2/26
@@ -26,20 +26,21 @@ describe("sheet import", () => {
   it("keeps every unique valid ZIP, including older weeks", () => {
     const parsed = parseSheet(csv);
     assert.equal(parsed.skipped.length, 1);
+    const dayTitle = titleForDate("2026-11-05", titles);
     const thursday = syncSheetJobs(parsed.rows, [], "2026-11-05", titles);
     const open = thursday.filter((job) => job.status === "open");
     assert.deepEqual(
       open.map((job) => job.postalcode).sort(),
       ["03060", "07094", "78006"],
     );
-    assert.equal(open.every((job) => job.title === "Mystery Shopper" && job.title_id === "mystery-shopper"), true);
+    assert.equal(open.every((job) => job.title === dayTitle.title && job.title_id === dayTitle.title_id), true);
     assert.equal(open.every((job) => job.date_posted === "2026-11-05" && job.valid_through === "2026-11-05"), true);
     assert.equal(open.every((job) => job.pay === "$6 - $17 per audit"), true);
     const nashua = open.find((job) => job.postalcode === "03060");
     assert.equal(nashua?.city, "Nashua");
     assert.equal(nashua?.state, "NH");
     assert.equal(nashua?.metro, "Boston, MA");
-    assert.equal(nashua?.referencenumber, "HTL-03060-20261105-mystery-shopper-01");
+    assert.equal(nashua?.referencenumber, `HTL-03060-20261105-${dayTitle.title_id}-01`);
     assert.equal(nashua?.date_added, "2026-11-02");
     assert.equal(nashua?.priority, 1);
     const boerne = open.find((job) => job.postalcode === "78006");
@@ -48,9 +49,11 @@ describe("sheet import", () => {
     const xml = buildFeedXml(thursday, "https://www.hetalretail.com");
     assert.equal(xml.includes("channel="), false);
     assert.equal(xml.includes("source="), false);
-    assert.match(
-      xml,
-      /<url><!\[CDATA\[https:\/\/www\.hetalretail\.com\/jobs\/HTL-03060-20261105-mystery-shopper-01\]\]><\/url>/,
+    assert.equal(
+      xml.includes(
+        `<url><![CDATA[https://www.hetalretail.com/jobs/HTL-03060-20261105-${dayTitle.title_id}-01]]></url>`,
+      ),
+      true,
     );
     assert.match(xml, /<priority>1<\/priority>/);
     assert.match(xml, /<priority>2<\/priority>/);
@@ -62,7 +65,7 @@ describe("sheet import", () => {
     const href = buildOnelink(nashua!);
     const link = new URL(href);
     assert.equal(link.searchParams.get("c"), "xml-feed-hetal-website");
-    assert.equal(link.searchParams.get("af_adset"), "mystery-shopper");
+    assert.equal(link.searchParams.get("af_adset"), dayTitle.title_id);
     assert.equal([...link.searchParams.keys()].filter((key) => key === "c").length, 1);
   });
 
@@ -95,49 +98,53 @@ describe("sheet import", () => {
     assert.equal(after.find((job) => job.postalcode === "03060" && job.status === "open")?.referencenumber, before.find((job) => job.postalcode === "03060")?.referencenumber);
   });
 
-  it("rotates titles by weekday and mixes all three across every ZIP on Friday through Monday", () => {
+  it("gives every ZIP the day's title and a new reference on the next day", () => {
     const rows = parseSheet(csv).rows;
-    const tuesday = syncSheetJobs(rows, [], "2026-11-03", titles);
-    assert.equal(tuesday.filter((job) => job.status === "open").every((job) => job.title_id === "store-auditor"), true);
-    const wednesday = syncSheetJobs(rows, tuesday, "2026-11-04", titles);
-    const openWednesday = wednesday.filter((job) => job.status === "open");
-    assert.equal(openWednesday.every((job) => job.title_id === "retail-merchandiser"), true);
-    assert.equal(openWednesday.every((job) => job.referencenumber.includes("-20261104-retail-merchandiser-")), true);
-    assert.equal(
-      wednesday.some((job) => job.status === "closed" && job.title_id === "store-auditor" && job.date_posted === "2026-11-03"),
-      true,
-    );
-    const friday = syncSheetJobs(rows, wednesday, "2026-11-06", titles);
-    const openFriday = friday.filter((job) => job.status === "open");
-    assert.deepEqual(openFriday.map((job) => job.postalcode).sort(), ["03060", "07094", "78006"]);
-    assert.deepEqual(
-      new Set(openFriday.map((job) => job.title_id)),
-      new Set(["store-auditor", "retail-merchandiser", "mystery-shopper"]),
-    );
-    assert.equal(openFriday.every((job) => job.date_posted === "2026-11-06" && job.valid_through === "2026-11-09"), true);
-    assert.equal(buildFeedXml(friday, "https://www.hetalretail.com").includes("<job>"), true);
-    const fridayRefs = openFriday.map((job) => job.referencenumber).sort();
-    for (const day of ["2026-11-07", "2026-11-08", "2026-11-09"]) {
-      const later = syncSheetJobs(rows, friday, day, titles);
-      const open = later.filter((job) => job.status === "open");
-      assert.deepEqual(open.map((job) => job.referencenumber).sort(), fridayRefs);
-      assert.equal(open.every((job) => job.valid_through === "2026-11-09"), true);
+    let jobs = syncSheetJobs(rows, [], "2026-11-17", titles);
+    let previousRefs: string[] = [];
+    for (let offset = 0; offset < 8; offset += 1) {
+      const day = `2026-11-${String(17 + offset).padStart(2, "0")}`;
+      jobs = syncSheetJobs(rows, offset === 0 ? [] : jobs, day, titles);
+      const open = jobs.filter((job) => job.status === "open");
+      const title = titleForDate(day, titles);
+      assert.equal(open.length, 3);
+      assert.equal(open.every((job) => job.title === title.title && job.title_id === title.title_id), true);
+      assert.equal(open.every((job) => job.date_posted === day && job.valid_through === day), true);
+      assert.equal(buildFeedXml(jobs, "https://www.hetalretail.com").includes("<job>"), true);
+      const refs = open.map((job) => job.referencenumber).sort();
+      if (offset > 0) {
+        assert.equal(refs.some((ref) => previousRefs.includes(ref)), false);
+        assert.equal(
+          jobs.some((job) => job.status === "closed" && job.date_posted === `2026-11-${String(16 + offset).padStart(2, "0")}`),
+          true,
+        );
+      }
+      const again = syncSheetJobs(rows, jobs, day, titles);
+      assert.deepEqual(
+        again.filter((job) => job.status === "open").map((job) => job.referencenumber).sort(),
+        refs,
+      );
+      previousRefs = refs;
+      jobs = again;
     }
   });
 
   it("reuses the same reference on a second sync and does not reuse it for a new title", () => {
     const rows = parseSheet(csv).rows;
+    const firstTitle = titleForDate("2026-11-05", titles);
+    const nextTitle = titleForDate("2026-11-10", titles);
     const first = syncSheetJobs(rows, [], "2026-11-05", titles);
     const again = syncSheetJobs(rows, first, "2026-11-05", titles);
     assert.deepEqual(
       again.filter((job) => job.status === "open").map((job) => job.referencenumber).sort(),
       first.filter((job) => job.status === "open").map((job) => job.referencenumber).sort(),
     );
-    const nextTitle = syncSheetJobs(rows, again, "2026-11-10", titles);
-    const nashua = nextTitle.filter((job) => job.postalcode === "03060");
+    const next = syncSheetJobs(rows, again, "2026-11-10", titles);
+    const nashua = next.filter((job) => job.postalcode === "03060");
+    assert.notEqual(firstTitle.title_id, nextTitle.title_id);
     assert.equal(nashua.filter((job) => job.status === "open").length, 1);
-    assert.equal(nashua.find((job) => job.status === "open")?.title_id, "store-auditor");
-    assert.equal(nashua.some((job) => job.status === "closed" && job.title_id === "mystery-shopper"), true);
+    assert.equal(nashua.find((job) => job.status === "open")?.title_id, nextTitle.title_id);
+    assert.equal(nashua.some((job) => job.status === "closed" && job.title_id === firstTitle.title_id), true);
   });
 
   it("closes a ZIP that leaves the sheet", () => {
