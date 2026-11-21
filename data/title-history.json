@@ -18,5 +18,10 @@
     "date": "2026-11-20",
     "title": "In-Store Shelf Auditor - No Driving",
     "title_id": "shelf-auditor-no-driving"
+  },
+  {
+    "date": "2026-11-21",
+    "title": "In-Store Auditor",
+    "title_id": "in-store-auditor"
   }
 ]
