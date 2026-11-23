@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { loadLocalEnv } from "../lib/env-file";
+import { closedReferencenumbers } from "../lib/closed";
 import { loadJobs } from "../lib/jobs";
 import { parseTitlePool, recordTitleDay, titleForDate, type TitleHistoryEntry } from "../lib/schedule";
 import { DEFAULT_CSV_URL, parseSheet, todayInNewYork } from "../lib/sheet";
@@ -38,6 +39,10 @@ async function main() {
   const today = todayInNewYork();
   const jobs = syncSheetJobs(parsed.rows, existing, today, pool);
   fs.writeFileSync(jobsPath, `${JSON.stringify(jobs, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(root, "data", "closed-refs.json"),
+    `${JSON.stringify(closedReferencenumbers(jobs), null, 2)}\n`,
+  );
   const title = titleForDate(today, pool);
   const history = fs.existsSync(historyPath)
     ? (JSON.parse(fs.readFileSync(historyPath, "utf8")) as TitleHistoryEntry[])

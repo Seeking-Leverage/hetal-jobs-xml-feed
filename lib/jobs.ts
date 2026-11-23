@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import rawJobs from "../data/jobs.json";
+import { decodeReferencenumber } from "./closed";
 import { JobsDataError } from "./config";
 import type { Priority } from "./priority";
 import { JOB_STATUSES, JOB_TYPES, type Job, type JobStatus, type JobType } from "./types";
@@ -248,13 +249,7 @@ export function loadJobs(): Job[] {
   return parseJobs(readJobsSource());
 }
 
-export function decodeReferencenumber(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
+export { decodeReferencenumber };
 
 export function findJob(referencenumber: string): Job | undefined {
   const ref = decodeReferencenumber(referencenumber);
