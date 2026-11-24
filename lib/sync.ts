@@ -1,12 +1,13 @@
 import { JOB_PAY, JOB_TYPE, descriptionHtml } from "./description";
 import { compareJobs } from "./jobs";
-import { priorityByDateAdded } from "./priority";
+import { newestDateAddedWeeks, priorityByDateAdded } from "./priority";
 import { nextReference, planForDate, type TitlePool } from "./schedule";
 import { uniqueZips, type SheetRow } from "./sheet";
 import type { Job } from "./types";
 
 /**
  * One open job per sheet ZIP every day, all on that day's title.
+ * Only the five newest Date Added weeks stay open. Older weeks close.
  * A ZIP that leaves the sheet stays closed.
  * A new date gets a new reference number and closes the previous day's jobs.
  */
@@ -16,7 +17,11 @@ export function syncSheetJobs(
   today: string,
   titles: TitlePool,
 ): Job[] {
-  const places = uniqueZips(rows).sort((a, b) => a.postalcode.localeCompare(b.postalcode));
+  const unique = uniqueZips(rows);
+  const openWeeks = newestDateAddedWeeks(unique.map((place) => place.date_posted));
+  const places = unique
+    .filter((place) => openWeeks.has(place.date_posted))
+    .sort((a, b) => a.postalcode.localeCompare(b.postalcode));
   const priorities = priorityByDateAdded(places.map((place) => place.date_posted));
   const plan = planForDate(today, titles);
   const jobs: Job[] = existing.map((job) => ({ ...job, status: "closed" }));

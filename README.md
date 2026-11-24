@@ -72,9 +72,9 @@ That downloads the published CSV. No Google sign-in is required. To use a local 
 npm run sync-jobs -- path/to/jobs.csv
 ```
 
-Every unique valid 5-digit ZIP on the sheet becomes one job, including older Date Added weeks. If a ZIP appears more than once, the latest Date Added is kept. Metro is stored for reporting and is left out of the pages and feeds. A ZIP that leaves the sheet is closed and dropped from the feed and sitemap. Running the sync again keeps an existing reference number for the same ZIP, day, and title.
+Every unique valid 5-digit ZIP on the sheet can become a job. If a ZIP appears more than once, the latest Date Added is kept. Only the five newest Date Added weeks stay open. A sixth week on the sheet closes every ZIP from the oldest week automatically. Metro is stored for reporting and is left out of the pages and feeds. A ZIP that leaves the sheet is closed and dropped from the feed and sitemap. Running the sync again keeps an existing reference number for the same ZIP, day, and title.
 
-Priority is recalculated on every sync. Distinct Date Added dates are the weeks. The newest date is `<priority>1</priority>`. Each older date is 2, then 3, then 4. Every date older than that stays at 5. A new week on the sheet becomes 1 and moves the previous newest week to 2. Priority does not create a second job for a ZIP.
+Priority is recalculated on every sync. Distinct Date Added dates among the open weeks are the weeks. The newest date is `<priority>1</priority>`. Each older open date is 2, then 3, then 4, then 5. A new week on the sheet becomes 1, moves the previous weeks down, and drops the week that would have been 6. Priority does not create a second job for a ZIP.
 
 Pay is `$6 - $17 per audit`. The feed contact email is `marketing@hetalretail.com`.
 

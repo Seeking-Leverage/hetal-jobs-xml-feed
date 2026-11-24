@@ -98,6 +98,41 @@ describe("sheet import", () => {
     assert.equal(after.find((job) => job.postalcode === "03060" && job.status === "open")?.referencenumber, before.find((job) => job.postalcode === "03060")?.referencenumber);
   });
 
+  it("keeps the five newest Date Added weeks and closes older weeks", () => {
+    const csvSixWeeks = `City,Zip,Metro,Date Added
+"Nashua, NH",03060,"Boston, MA",11/16/26
+"Secaucus, NJ",07094,"New York, NY",11/9/26
+"Hackensack, NJ",07601,"New York, NY",11/2/26
+"Cambridge, MA",02139,"Boston, MA",10/26/26
+"Helotes, TX",78023,"San Antonio, TX",10/19/26
+"Boerne, TX",78006,"San Antonio, TX",10/12/26
+`;
+    const rows = parseSheet(csvSixWeeks).rows;
+    const first = syncSheetJobs(rows, [], "2026-11-23", titles);
+    const open = first.filter((job) => job.status === "open");
+    assert.deepEqual(
+      open.map((job) => `${job.priority} ${job.postalcode} ${job.date_added}`).sort(),
+      [
+        "1 03060 2026-11-16",
+        "2 07094 2026-11-09",
+        "3 07601 2026-11-02",
+        "4 02139 2026-10-26",
+        "5 78023 2026-10-19",
+      ],
+    );
+    assert.equal(first.some((job) => job.postalcode === "78006"), false);
+    assert.equal(buildFeedXml(first, "https://www.hetalretail.com").includes("78006"), false);
+
+    const withNewer = parseSheet(`${csvSixWeeks}"Gilbert, AZ",85296,"Phoenix, AZ",11/23/26
+`).rows;
+    const next = syncSheetJobs(withNewer, first, "2026-11-23", titles);
+    const openNext = next.filter((job) => job.status === "open");
+    assert.equal(openNext.find((job) => job.postalcode === "85296")?.priority, 1);
+    assert.equal(openNext.find((job) => job.postalcode === "03060")?.priority, 2);
+    assert.equal(openNext.some((job) => job.postalcode === "78023"), false);
+    assert.equal(next.find((job) => job.postalcode === "78023")?.status, "closed");
+  });
+
   it("gives every ZIP the day's title and a new reference on the next day", () => {
     const rows = parseSheet(csv).rows;
     let jobs = syncSheetJobs(rows, [], "2026-11-17", titles);
